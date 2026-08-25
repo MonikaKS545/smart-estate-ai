@@ -2,10 +2,10 @@ from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, properties, favorites, saved_searches, admin
+from app.routers import auth, properties, favorites, saved_searches, admin, ml_router
 import os
 
-app = FastAPI(title="SmartEstate AI - Part 1")
+app = FastAPI(title="SmartEstate AI - Full Platform")
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,7 +25,7 @@ app.include_router(properties.router, prefix="/api/v1")
 app.include_router(favorites.router, prefix="/api/v1")
 app.include_router(saved_searches.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
-
+app.include_router(ml_router.router, prefix="/api/v1")
 
 @app.get("/")
 def root():
