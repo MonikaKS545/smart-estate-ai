@@ -9,6 +9,12 @@ from app.models.property import Property
 from app.schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse
 from app.core.deps import get_current_user, require_role
 
+from fastapi import UploadFile, File
+import shutil
+import uuid as uuid_lib
+import os
+from app.models.common import PropertyImage
+
 router = APIRouter(prefix="/properties", tags=["properties"])
 
 
@@ -107,3 +113,34 @@ def delete_property(
     db.delete(prop)
     db.commit()
     return {"message": "Property deleted successfully"}
+
+
+@router.post("/{property_id}/images")
+def upload_property_image(
+    property_id: UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    prop = db.query(Property).filter(Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+
+    if prop.agent_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to add images to this property")
+
+    os.makedirs("uploads", exist_ok=True)
+    file_extension = file.filename.split(".")[-1]
+    unique_filename = f"{uuid_lib.uuid4()}.{file_extension}"
+    file_path = os.path.join("uploads", unique_filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    image_url = f"/uploads/{unique_filename}"
+    new_image = PropertyImage(property_id=property_id, image_url=image_url)
+    db.add(new_image)
+    db.commit()
+    db.refresh(new_image)
+
+    return {"image_url": image_url}
