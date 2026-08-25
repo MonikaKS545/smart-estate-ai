@@ -10,6 +10,11 @@ from app.core.deps import get_current_user
 from app.schemas.auth import OTPSendRequest, OTPVerifyRequest
 from app.utils.email_otp import send_otp_email, verify_otp
 
+from fastapi import Request
+from fastapi.responses import RedirectResponse
+from app.utils.google_oauth import oauth
+import os
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
@@ -51,7 +56,7 @@ def get_me(current_user: User = Depends(get_current_user)):
         "role": current_user.role.value,
     }
 
-    
+
 @router.post("/otp/send")
 def otp_send(payload: OTPSendRequest):
     try:
@@ -83,3 +88,41 @@ def otp_verify(payload: OTPVerifyRequest, db: Session = Depends(get_db)):
 
     token = create_access_token({"sub": str(user.id), "role": user.role.value})
     return {"user": user, "token": token}
+
+@router.get("/google/login")
+async def google_login(request: Request):
+    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@router.get("/google/callback")
+async def google_callback(request: Request, db: Session = Depends(get_db)):
+    token = await oauth.google.authorize_access_token(request)
+    user_info = token.get("userinfo")
+
+    if not user_info:
+        raise HTTPException(status_code=400, detail="Failed to fetch user info from Google")
+
+    email = user_info["email"]
+    name = user_info.get("name", email.split("@")[0])
+    google_id = user_info["sub"]
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(
+            name=name,
+            email=email,
+            google_id=google_id,
+            is_verified=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    elif not user.google_id:
+        user.google_id = google_id
+        db.commit()
+        db.refresh(user)
+
+    access_token = create_access_token({"sub": str(user.id), "role": user.role.value})
+    return {"user": {"id": str(user.id), "name": user.name, "email": user.email, "role": user.role.value}, "token": access_token}
+    
