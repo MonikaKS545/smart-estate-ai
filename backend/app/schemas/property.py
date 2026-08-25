@@ -71,3 +71,7 @@ class PropertyResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class FavoriteCreate(BaseModel):
+    property_id: UUID
