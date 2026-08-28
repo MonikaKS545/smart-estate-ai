@@ -1,3 +1,4 @@
+ HEAD
 import { useState } from "react";
 import {
   BarChart,
@@ -188,3 +189,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

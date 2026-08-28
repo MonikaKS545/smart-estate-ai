@@ -6,6 +6,8 @@ import PropertyCard from "../components/PropertyCard";
 import mockProperties from "../mocks/mockProperties";
 import mockAnalysis from "../mocks/mockAnalysis";
 import mockRecommendations from "../mocks/mockRecommendations";
+import { useState } from "react";
+import { useParams } from "react-router-dom";
 
 /**
  * PropertyDetail page.
@@ -21,7 +23,9 @@ import mockRecommendations from "../mocks/mockRecommendations";
  * is a plain prop for now (defaults to the first mock property).
  * Once real routing exists, this becomes `const { id } = useParams()`.
  */
-export default function PropertyDetail({ propertyId = 1 }) {
+export default function PropertyDetail() {
+  const { id } = useParams();
+  const propertyId = Number(id);
   const [activeImage, setActiveImage] = useState(0);
 
   const isLoading = false;
