@@ -1,4 +1,4 @@
-HEAD
+
 import { useState } from "react";
 import { Check, Heart } from "lucide-react";
 import PropertyCard from "../components/PropertyCard";

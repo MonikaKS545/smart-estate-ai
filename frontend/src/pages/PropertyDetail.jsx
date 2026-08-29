@@ -6,7 +6,6 @@ import PropertyCard from "../components/PropertyCard";
 import mockProperties from "../mocks/mockProperties";
 import mockAnalysis from "../mocks/mockAnalysis";
 import mockRecommendations from "../mocks/mockRecommendations";
-import { useState } from "react";
 import { useParams } from "react-router-dom";
 
 /**
