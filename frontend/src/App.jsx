@@ -8,6 +8,12 @@ import BuyerDashboard from './pages/BuyerDashboard';
 import AgentDashboard from './pages/AgentDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import PropertySearch from './pages/PropertySearch';
+import PropertyDetail from './pages/PropertyDetail';
+import MapView from './pages/MapView';
+import Compare from './pages/Compare';
+import Favorites from './pages/Favorites';
+import ChatAssistant from './pages/ChatAssistant';
+import DocumentVerification from './pages/DocumentVerification';
 
 function App() {
   return (
@@ -18,7 +24,12 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/search" element={<PropertySearch />} />
-
+        <Route path="/property/:id" element={<PropertyDetail />} />
+        <Route path="/map" element={<MapView />} />
+        <Route path="/compare" element={<Compare />} />
+        <Route path="/favorites" element={<Favorites />} />
+        <Route path="/chat" element={<ChatAssistant />} />
+        <Route path="/verify-documents" element={<DocumentVerification />} />
         <Route
           path="/buyer"
           element={
