@@ -5,7 +5,16 @@ from app.rag.vector_store import search_properties
 
 load_dotenv()
 
-_groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+_groq_client = None
+
+def get_groq_client():
+    global _groq_client
+    if _groq_client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            return None
+        _groq_client = Groq(api_key=api_key)
+    return _groq_client
 
 SYSTEM_PROMPT = """You are a real estate assistant for SmartEstate AI.
 You must answer ONLY using the property data provided below.
@@ -44,6 +53,13 @@ def format_properties_for_prompt(properties):
 
 
 def answer_query(query: str, top_k: int = 5):
+    client = get_groq_client()
+    if not client:
+        return {
+            "response_text": "AI Assistant is currently unavailable because GROQ_API_KEY is not configured.",
+            "referenced_property_ids": [],
+        }
+
     matches = get_relevant_properties(query, top_k=top_k)
 
     if not matches:
@@ -61,7 +77,7 @@ Available property data (this is the ONLY data you may use to answer):
 
 Answer the user's question using only the above data."""
 
-    completion = _groq_client.chat.completions.create(
+    completion = client.chat.completions.create(
         model="openai/gpt-oss-120b",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
