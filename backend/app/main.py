@@ -7,9 +7,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.routers import (
     auth, properties, favorites, saved_searches, admin, ml_router,
     inquiries, ai_assistant, financials, analytics, forecasting, 
-    security_audit, sustainability, documents
+    security_audit, sustainability, documents, chatbot, recommendations, location, analysis
 )
-
 app = FastAPI(
     title="SmartEstate AI Backend - Enterprise Edition",
     description="AI-powered Real Estate Platform with Valuation, Forecasting, Security, Sustainability & Document Intelligence APIs",
@@ -43,7 +42,10 @@ app.include_router(forecasting.router, prefix="/api/v1")
 app.include_router(security_audit.router, prefix="/api/v1")
 app.include_router(sustainability.router, prefix="/api/v1")
 app.include_router(documents.router, prefix="/api/v1")
-
+app.include_router(chatbot.router, prefix="/api/v1")
+app.include_router(recommendations.router, prefix="/api/v1")
+app.include_router(location.router, prefix="/api/v1")
+app.include_router(analysis.router, prefix="/api/v1")
 
 @app.get("/")
 def root():
