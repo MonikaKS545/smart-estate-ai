@@ -5,28 +5,77 @@ from app.location.location_intel import get_location_intel
 from app.recommendation.content_based import build_user_profile, score_property
 
 
-# ---- MOCKED Part 2 / Part 3 calls (swap these for real HTTP calls at integration time) ----
+# ---- REAL Part 2 calls (swapped in from mocks) ----
 
-def mock_predict_price(property_obj: Property):
-    """Mocks Part 2's POST /ml/predict-price response shape."""
+from ml.price_predictor import predictor
+from ml.fraud_scorer import fraud_scorer
+
+
+def get_property_amenity_names(db, property_obj: Property):
+    rows = (
+        db.query(Amenity.name)
+        .join(PropertyAmenity, PropertyAmenity.amenity_id == Amenity.id)
+        .filter(PropertyAmenity.property_id == property_obj.id)
+        .all()
+    )
+    return [r[0] for r in rows]
+
+
+def real_predict_price(db, property_obj: Property):
+    """Calls Part 2's real price prediction model directly."""
     if not property_obj.price:
         return None
-    predicted = float(property_obj.price) * 1.04  # pretend model predicts 4% higher
-    difference_percent = round(((float(property_obj.price) - predicted) / predicted) * 100, 2)
-    return {
-        "predicted_price": round(predicted, 2),
-        "difference_percent": difference_percent,
-        "model_version": "mock-v1",
-    }
+    try:
+        amenities = get_property_amenity_names(db, property_obj)
+        result = predictor.predict(
+            property_type=property_obj.property_type or "apartment",
+            listing_type=property_obj.listing_type.value if property_obj.listing_type else "buy",
+            area_sqft=float(property_obj.area_sqft) if property_obj.area_sqft else 0,
+            bhk=property_obj.bhk or 0,
+            bedrooms=property_obj.bhk or 0,
+            floor=property_obj.floor or 0,
+            total_floors=property_obj.total_floors or 0,
+            property_age_years=property_obj.property_age_years or 0,
+            furnishing=property_obj.furnishing or "unfurnished",
+            parking=1 if property_obj.parking else 0,
+            city=property_obj.city or "",
+            amenities=amenities,
+        )
+        return {
+            "predicted_price": result.predicted_price,
+            "difference_percent": result.difference_percent,
+        }
+    except Exception as e:
+        print(f"Warning: real price prediction failed, skipping: {e}")
+        return None
 
 
-def mock_fraud_score(property_obj: Property):
-    """Mocks Part 2's POST /ml/fraud-score response shape."""
-    return {
-        "trust_score": 82,
-        "risk_level": "low",
-        "reasons_json": ["Price within expected range", "Listing details consistent"],
-    }
+def real_fraud_score(db, property_obj: Property):
+    """Calls Part 2's real fraud scoring model directly."""
+    try:
+        amenities = get_property_amenity_names(db, property_obj)
+        result = fraud_scorer.score(
+            property_type=property_obj.property_type or "apartment",
+            listing_type=property_obj.listing_type.value if property_obj.listing_type else "buy",
+            price=float(property_obj.price) if property_obj.price else 0,
+            area_sqft=float(property_obj.area_sqft) if property_obj.area_sqft else 0,
+            bhk=property_obj.bhk or 0,
+            bedrooms=property_obj.bhk or 0,
+            floor=property_obj.floor or 0,
+            total_floors=property_obj.total_floors or 0,
+            property_age_years=property_obj.property_age_years or 0,
+            furnishing=property_obj.furnishing or "unfurnished",
+            parking=1 if property_obj.parking else 0,
+            city=property_obj.city or "",
+            amenities=amenities,
+        )
+        return {
+            "trust_score": result["trust_score"] if isinstance(result, dict) else result.trust_score,
+            "risk_level": result["risk_level"] if isinstance(result, dict) else result.risk_level,
+        }
+    except Exception as e:
+        print(f"Warning: real fraud scoring failed, using fallback: {e}")
+        return {"trust_score": 50, "risk_level": "unknown"}
 
 
 def get_document_score(db, property_id):
@@ -104,9 +153,9 @@ def analyze_property(property_id: str, user_id: str = None):
         if not prop:
             return {"error": "Property not found"}
 
-        # Mocked Part 2 calls
-        price_prediction = mock_predict_price(prop)
-        fraud_data = mock_fraud_score(prop)
+        # Real Part 2 calls
+        price_prediction = real_predict_price(db, prop)
+        fraud_data = real_fraud_score(db, prop)
 
         # Real DB-backed Part 3 check
         document_score = get_document_score(db, property_id)
@@ -171,4 +220,3 @@ if __name__ == "__main__":
             print("No properties found in DB")
     finally:
         db.close()
-        
