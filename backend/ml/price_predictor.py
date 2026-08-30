@@ -1,9 +1,11 @@
 import joblib
 import numpy as np
+import pandas as pd
 import os
 from typing import List
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "price_model.pkl")
+BASE_DIR = os.path.dirname(__file__)
+MODEL_PATH = os.path.join(BASE_DIR, "models", "price_model.pkl")
 
 CITY_AVG_SQFT = {
     "Whitefield": 6500, "Koramangala": 9500, "Indiranagar": 11000,
@@ -22,7 +24,18 @@ class PricePredictor:
 
     def _load(self):
         if self._a is None:
-            self._a = joblib.load(MODEL_PATH)
+            try:
+                self._a = joblib.load(MODEL_PATH)
+            except Exception as e:
+                # If model pickle version mismatch occurs, auto-retrain if dataset exists
+                train_script = os.path.join(BASE_DIR, "train_price_model.py")
+                if os.path.exists(train_script):
+                    import subprocess, sys
+                    print(f"Model load failed ({e}). Auto-retraining with local scikit-learn environment...")
+                    subprocess.run([sys.executable, train_script], check=True, cwd=BASE_DIR)
+                    self._a = joblib.load(MODEL_PATH)
+                else:
+                    raise e
 
     def _encode(self, col: str, value: str):
         enc = self._a["encoders"][col]
@@ -34,13 +47,27 @@ class PricePredictor:
                 city: str, amenities: List[str]) -> dict:
         self._load()
 
-        X = np.array([[
-            self._encode("property_type", property_type),
-            self._encode("furnishing", furnishing),
-            self._encode("city", city),
-            area_sqft, bhk, bedrooms, floor, total_floors,
-            property_age_years, parking, len(amenities)
-        ]])
+        feat_cols = self._a.get("feature_cols", [
+            "property_type_enc", "furnishing_enc", "city_enc",
+            "area_sqft", "bhk", "bedrooms", "floor", "total_floors",
+            "property_age_years", "parking", "amenity_count"
+        ])
+
+        row_dict = {
+            "property_type_enc": self._encode("property_type", property_type),
+            "furnishing_enc": self._encode("furnishing", furnishing),
+            "city_enc": self._encode("city", city),
+            "area_sqft": area_sqft,
+            "bhk": bhk,
+            "bedrooms": bedrooms,
+            "floor": floor,
+            "total_floors": total_floors,
+            "property_age_years": property_age_years,
+            "parking": parking,
+            "amenity_count": len(amenities) if amenities else 0
+        }
+
+        X = pd.DataFrame([[row_dict[c] for c in feat_cols]], columns=feat_cols)
         X_s = self._a["scaler"].transform(X)
         predicted = float(self._a["model"].predict(X_s)[0])
 
