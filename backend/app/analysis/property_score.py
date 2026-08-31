@@ -42,8 +42,8 @@ def real_predict_price(db, property_obj: Property):
             amenities=amenities,
         )
         return {
-            "predicted_price": result.predicted_price,
-            "difference_percent": result.difference_percent,
+            "predicted_price": result["predicted_price"] if isinstance(result, dict) else result.predicted_price,
+            "difference_percent": result["difference_percent"] if isinstance(result, dict) else result.difference_percent,
         }
     except Exception as e:
         print(f"Warning: real price prediction failed, skipping: {e}")
