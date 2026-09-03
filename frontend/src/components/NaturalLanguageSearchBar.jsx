@@ -76,8 +76,14 @@ export default function NaturalLanguageSearchBar({ properties, onResults }) {
           size={16}
           className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
         />
+        <label htmlFor="nl-search-input" className="sr-only">
+          Search properties
+        </label>
         <input
+          id="nl-search-input"
+          name="search"
           type="text"
+          autoComplete="off"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Try '3BHK under 1 crore in Koramangala'"

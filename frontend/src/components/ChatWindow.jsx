@@ -82,8 +82,14 @@ export default function ChatWindow() {
         onSubmit={handleSend}
         className="flex gap-2 border-t border-gray-100 p-3"
       >
+        <label htmlFor="chat-message-input" className="sr-only">
+          Type your message
+        </label>
         <input
+          id="chat-message-input"
+          name="message"
           type="text"
+          autoComplete="off"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask about properties, budgets, or locations..."
