@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Check, Heart } from "lucide-react";
 import PropertyCard from "../components/PropertyCard";
 import FilterPanel from "../components/FilterPanel";
@@ -30,6 +30,7 @@ import mockProperties from "../mocks/mockProperties";
  */
 export default function PropertySearch() {
   const [isLoading] = useState(false);
+  const navigate = useNavigate();
   const [error] = useState(null);
 
   const [filteredResults, setFilteredResults] = useState(mockProperties);
@@ -161,7 +162,10 @@ export default function PropertySearch() {
                         )}
                       </button>
                     </div>
-                    <PropertyCard property={property} />
+                    <PropertyCard
+                      property={property}
+                      onClick={() => navigate(`/property/${property.id}`)}
+                    />
                   </div>
                 );
               })}

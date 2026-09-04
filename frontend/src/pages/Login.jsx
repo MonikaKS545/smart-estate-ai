@@ -27,42 +27,52 @@ function Login() {
     else navigate('/buyer');
   };
 
-  const inputStyle = {
-    width: '100%',
-    padding: '8px',
-    border: '1px solid #999',
-    borderRadius: '4px',
-    boxSizing: 'border-box',
-  };
-
   return (
-    <div style={{ maxWidth: '400px', margin: '80px auto', padding: '24px' }}>
-      <h2>Login</h2>
+    <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6 text-gray-900">Login</h2>
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '12px' }}>
-          <label>Email</label><br />
+        <div className="mb-4">
+          <label htmlFor="login-email" className="block mb-1 text-sm font-medium text-gray-700">
+            Email
+          </label>
           <input
+            id="login-email"
+            name="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={inputStyle}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div style={{ marginBottom: '12px' }}>
-          <label>Password</label><br />
+        <div className="mb-4">
+          <label htmlFor="login-password" className="block mb-1 text-sm font-medium text-gray-700">
+            Password
+          </label>
           <input
+            id="login-password"
+            name="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={inputStyle}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" style={{ padding: '8px 16px' }}>Login</button>
+        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
+        >
+          Login
+        </button>
       </form>
-      <p>Don't have an account? <Link to="/register">Register</Link></p>
+      <p className="mt-4 text-sm text-gray-600">
+        Don't have an account?{' '}
+        <Link to="/register" className="text-blue-600 hover:underline">
+          Register
+        </Link>
+      </p>
     </div>
   );
 }
