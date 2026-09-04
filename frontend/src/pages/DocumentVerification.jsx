@@ -69,9 +69,14 @@ export default function DocumentVerification() {
       <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center space-y-3">
         <Upload size={28} className="mx-auto text-gray-400" />
         <div>
-          <label className="inline-block cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
+          <label
+            htmlFor="document-upload-input"
+            className="inline-block cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
             Choose a file to upload
             <input
+              id="document-upload-input"
+              name="document"
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               className="hidden"

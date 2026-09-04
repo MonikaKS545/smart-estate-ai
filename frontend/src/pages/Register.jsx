@@ -7,11 +7,13 @@ function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     try {
       const response = await client.post('/auth/register', { name, email, password });
       localStorage.setItem('token', response.data.token);
@@ -19,55 +21,102 @@ function Register() {
       navigate('/buyer');
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const inputStyle = {
-    width: '100%',
-    padding: '8px',
-    border: '1px solid #999',
-    borderRadius: '4px',
-    boxSizing: 'border-box',
-  };
-
   return (
-    <div style={{ maxWidth: '400px', margin: '80px auto', padding: '24px' }}>
-      <h2>Register</h2>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '12px' }}>
-          <label>Name</label><br />
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            style={inputStyle}
-          />
+    <div className="min-h-[calc(100vh-120px)] flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-200 p-8 space-y-6">
+        <div className="text-center space-y-1">
+          <h2 className="text-2xl font-bold text-gray-900">Create an Account</h2>
+          <p className="text-sm text-gray-500">Sign up to explore and list smart properties</p>
         </div>
-        <div style={{ marginBottom: '12px' }}>
-          <label>Email</label><br />
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={inputStyle}
-          />
-        </div>
-        <div style={{ marginBottom: '12px' }}>
-          <label>Password</label><br />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={inputStyle}
-          />
-        </div>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" style={{ padding: '8px 16px' }}>Register</button>
-      </form>
-      <p>Already have an account? <Link to="/login">Login</Link></p>
+
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="register-name"
+              className="block mb-1 text-sm font-medium text-gray-700"
+            >
+              Full Name
+            </label>
+            <input
+              id="register-name"
+              name="name"
+              type="text"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="e.g. John Doe"
+              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="register-email"
+              className="block mb-1 text-sm font-medium text-gray-700"
+            >
+              Email Address
+            </label>
+            <input
+              id="register-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="name@example.com"
+              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="register-password"
+              className="block mb-1 text-sm font-medium text-gray-700"
+            >
+              Password
+            </label>
+            <input
+              id="register-password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="••••••••"
+              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-blue-300 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Creating Account...' : 'Register'}
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-gray-600">
+          Already have an account?{' '}
+          <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-700 underline">
+            Login
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
