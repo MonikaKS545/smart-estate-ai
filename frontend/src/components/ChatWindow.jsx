@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Send, Bot, User } from "lucide-react";
-import { getMockChatResponse, mockChatWelcome } from "../mocks/mockChat";
+import { mockChatWelcome } from "../mocks/mockChat";
 import PropertyCard from "./PropertyCard";
-import mockProperties from "../mocks/mockProperties";
-
+import client from "../api/client";
 /**
  * Reusable chat window. Uses getMockChatResponse() from mockChat.js —
  * swapping this for a real POST /chat/message call later is a
@@ -14,21 +13,52 @@ export default function ChatWindow() {
     { role: "assistant", ...mockChatWelcome },
   ]);
   const [input, setInput] = useState("");
+  const [propertyCache, setPropertyCache] = useState({});
 
-  function handleSend(e) {
+      async function handleSend(e) {
     e.preventDefault();
     const text = input.trim();
     if (!text) return;
 
     const userMessage = { role: "user", response_text: text };
-
-    // This is the one call to swap for a real API request later:
-    // const reply = await axios.post('/chat/message', { message: text })
-    const reply = getMockChatResponse(text);
-    const assistantMessage = { role: "assistant", ...reply };
-
-    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
+
+    try {
+      const res = await client.post("/chat/message", { message: text });
+      const assistantMessage = { role: "assistant", ...res.data };
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      const idsToFetch = (res.data.referenced_property_ids || []).filter(
+        (id) => !propertyCache[id]
+      );
+      if (idsToFetch.length > 0) {
+        const results = await Promise.allSettled(
+          idsToFetch.map((id) => client.get(`/properties/${id}`))
+        );
+        setPropertyCache((prev) => {
+          const updated = { ...prev };
+          results.forEach((r, i) => {
+            if (r.status === "fulfilled") {
+              updated[idsToFetch[i]] = {
+              ...r.value.data.property,
+             images: r.value.data.images,
+    amenities: r.value.data.amenities,
+  };
+}
+          });
+          return updated;
+        });
+      }
+    } catch (err) {
+      const errorMessage = {
+        role: "assistant",
+        response_text:
+          err.response?.data?.detail || "Something went wrong. Please try again.",
+        referenced_property_ids: [],
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    }
   }
 
   return (
@@ -58,10 +88,10 @@ export default function ChatWindow() {
                 {msg.response_text}
               </div>
 
-              {msg.referenced_property_ids?.length > 0 && (
+                {msg.referenced_property_ids?.length > 0 && (
                 <div className="grid grid-cols-1 gap-2">
                   {msg.referenced_property_ids.map((id) => {
-                    const property = mockProperties.find((p) => p.id === id);
+                    const property = propertyCache[id];
                     if (!property) return null;
                     return <PropertyCard key={id} property={property} />;
                   })}
