@@ -1,44 +1,54 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Check, Heart } from "lucide-react";
 import PropertyCard from "../components/PropertyCard";
 import FilterPanel from "../components/FilterPanel";
 import NaturalLanguageSearchBar from "../components/NaturalLanguageSearchBar";
-import Compare from "./Compare";
-import mockProperties from "../mocks/mockProperties";
+import client from "../api/client";
 
-/**
- * PropertySearch page.
- *
- * Flow: FilterPanel narrows the full mock list down to `filteredResults`.
- * The search bar then searches WITHIN `filteredResults` (not the full
- * list), so filters and search narrow down together rather than
- * fighting each other. Changing a filter resets whatever the search
- * bar had narrowed down to.
- *
- * Compare: each card gets a checkbox (rendered here, not inside
- * PropertyCard, to keep that component general-purpose). Once 2+ are
- * checked, a "Compare Selected" button reveals the Compare page
- * inline below the grid — since there's no router yet to send users
- * to a real /compare route.
- *
- * Favorites: same lifted-state pattern as Compare — a heart-toggle
- * button per card, tracked here as `favoriteIds`. Once real routing
- * exists, this state (and Compare's compareIds) would move to a
- * shared context or be persisted to the backend instead of living
- * only in this page.
- */
 export default function PropertySearch() {
-  const [isLoading] = useState(false);
-  const [error] = useState(null);
+  const navigate = useNavigate();
 
-  const [filteredResults, setFilteredResults] = useState(mockProperties);
-  const [displayedResults, setDisplayedResults] = useState(mockProperties);
+  const [allProperties, setAllProperties] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const [filteredResults, setFilteredResults] = useState([]);
+  const [displayedResults, setDisplayedResults] = useState([]);
 
   const [compareIds, setCompareIds] = useState([]);
-  const [showCompare, setShowCompare] = useState(false);
 
-  const [favoriteIds, setFavoriteIds] = useState([]);
+  const [favoriteMap, setFavoriteMap] = useState({}); // property_id -> favorite_id
+
+  useEffect(() => {
+    async function loadProperties() {
+      try {
+        const res = await client.get("/properties");
+        setAllProperties(res.data.properties);
+        setFilteredResults(res.data.properties);
+        setDisplayedResults(res.data.properties);
+      } catch (err) {
+        setError(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadProperties();
+
+    async function loadFavorites() {
+      try {
+        const res = await client.get("/favorites");
+        const map = {};
+        res.data.properties.forEach((p) => {
+          if (p.favorite_id) map[p.id] = p.favorite_id;
+        });
+        setFavoriteMap(map);
+      } catch {
+        // not logged in or no favorites yet — fine, just leave empty
+      }
+    }
+    loadFavorites();
+  }, []);
 
   function handleFilterChange(filtered) {
     setFilteredResults(filtered);
@@ -55,10 +65,31 @@ export default function PropertySearch() {
     );
   }
 
-  function toggleFavorite(id) {
-    setFavoriteIds((prev) =>
-      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
-    );
+  async function toggleFavorite(id) {
+    const existingFavoriteId = favoriteMap[id];
+    if (existingFavoriteId) {
+      try {
+        await client.delete(`/favorites/${existingFavoriteId}`);
+        setFavoriteMap((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      } catch (err) {
+        console.error("Failed to remove favorite", err);
+      }
+    } else {
+      try {
+        const res = await client.post("/favorites", { property_id: id });
+        setFavoriteMap((prev) => ({ ...prev, [id]: res.data.id }));
+      } catch (err) {
+        console.error("Failed to add favorite", err);
+      }
+    }
+  }
+
+  function goToCompare() {
+    navigate(`/compare?ids=${compareIds.join(",")}`);
   }
 
   if (error) {
@@ -75,9 +106,9 @@ export default function PropertySearch() {
         <h1 className="text-2xl font-bold text-gray-900">
           Find Your Property
         </h1>
-        {favoriteIds.length > 0 && (
+        {Object.keys(favoriteMap).length > 0 && (
           <span className="text-sm text-gray-500">
-            {favoriteIds.length} saved
+            {Object.keys(favoriteMap).length} saved
           </span>
         )}
       </div>
@@ -91,7 +122,7 @@ export default function PropertySearch() {
 
       <div className="flex flex-col sm:flex-row gap-6">
         <FilterPanel
-          properties={mockProperties}
+          properties={allProperties}
           onFilterChange={handleFilterChange}
         />
 
@@ -102,19 +133,12 @@ export default function PropertySearch() {
                 {compareIds.length} properties selected
               </span>
               <button
-                onClick={() => setShowCompare((s) => !s)}
+                onClick={goToCompare}
                 className="text-sm font-medium text-blue-700 underline"
               >
-                {showCompare ? "Hide Comparison" : "Compare Selected"}
+                Compare Selected
               </button>
             </div>
-          )}
-
-          {showCompare && compareIds.length >= 2 && (
-            <Compare
-              propertyIds={compareIds}
-              onClose={() => setShowCompare(false)}
-            />
           )}
 
           {isLoading ? (
@@ -129,7 +153,7 @@ export default function PropertySearch() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedResults.map((property) => {
                 const isSelected = compareIds.includes(property.id);
-                const isFavorited = favoriteIds.includes(property.id);
+                const isFavorited = Boolean(favoriteMap[property.id]);
                 return (
                   <div key={property.id} className="relative">
                     <div className="absolute top-2 right-2 z-10 flex gap-1.5">
@@ -161,7 +185,10 @@ export default function PropertySearch() {
                         )}
                       </button>
                     </div>
-                    <PropertyCard property={property} />
+                    <PropertyCard
+                      property={property}
+                      onClick={() => navigate(`/property/${property.id}`)}
+                    />
                   </div>
                 );
               })}

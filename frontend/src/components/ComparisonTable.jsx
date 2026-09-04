@@ -18,7 +18,17 @@ export default function ComparisonTable({ properties }) {
     bestScore === -Infinity ? -1 : scores.indexOf(bestScore);
 
   const rows = [
-    { label: "Price", get: (p) => `₹${(p.price / 100000).toFixed(0)} L` },
+    {
+  label: "Price",
+  get: (p) => {
+    const formatted = new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(p.price);
+    return p.listing_type === "rent" ? `${formatted}/month` : formatted;
+  },
+},
     { label: "Area", get: (p) => `${p.area_sqft} sqft` },
     { label: "BHK", get: (p) => p.bhk },
     { label: "Bathrooms", get: (p) => p.bathrooms },
