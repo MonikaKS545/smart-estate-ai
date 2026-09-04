@@ -1,42 +1,57 @@
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import ComparisonTable from "../components/ComparisonTable";
-import mockProperties from "../mocks/mockProperties";
+import client from "../api/client";
 
-/**
- * Compare page.
- *
- * Props:
- *  - propertyIds: array of property ids to compare (2+ expected).
- *    Passed down from PropertySearch's checkbox selection.
- *  - onClose: optional handler to dismiss/collapse this view (used
- *    when rendered inline on PropertySearch).
- */
-export default function Compare({ propertyIds = [], onClose }) {
-  const properties = propertyIds
-    .map((id) => mockProperties.find((p) => p.id === id))
-    .filter(Boolean);
+export default function Compare() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const ids = (searchParams.get("ids") || "").split(",").filter(Boolean);
+
+  const [properties, setProperties] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProperties() {
+      try {
+        const results = await Promise.all(
+          ids.map((id) => client.get(`/properties/${id}`))
+        );
+        setProperties(results.map((res) => res.data.property));
+      } catch (err) {
+        console.error("Failed to load properties for comparison", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    if (ids.length >= 2) loadProperties();
+    else setIsLoading(false);
+  }, [ids.join(",")]);
+
+  if (isLoading) {
+    return <div className="p-6 text-center text-gray-500">Loading comparison...</div>;
+  }
 
   if (properties.length < 2) {
     return (
-      <div className="p-6 text-center text-gray-500 border border-gray-200 rounded-xl">
+      <div className="p-6 text-center text-gray-500 border border-gray-200 rounded-xl m-6">
         Select at least 2 properties to compare.
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">
           Comparing {properties.length} Properties
         </h2>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            Close
-          </button>
-        )}
+        <button
+          onClick={() => navigate(-1)}
+          className="text-sm text-gray-500 hover:text-gray-700"
+        >
+          Back to Search
+        </button>
       </div>
       <ComparisonTable properties={properties} />
     </div>

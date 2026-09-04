@@ -42,10 +42,15 @@ def list_favorites(
     current_user: User = Depends(get_current_user),
 ):
     favorites = db.query(Favorite).filter(Favorite.user_id == current_user.id).all()
-    property_ids = [f.property_id for f in favorites]
+    property_map = {f.property_id: f.id for f in favorites}
+    property_ids = list(property_map.keys())
     properties = db.query(Property).filter(Property.id.in_(property_ids)).all()
-    return {"properties": [PropertyResponse.model_validate(p) for p in properties]}
-
+    return {
+        "properties": [
+            {**PropertyResponse.model_validate(p).model_dump(), "favorite_id": str(property_map[p.id])}
+            for p in properties
+        ]
+    }
 
 @router.delete("/{favorite_id}")
 def remove_favorite(

@@ -56,10 +56,12 @@ export default function FilterPanel({ properties, onFilterChange }) {
       <h3 className="font-semibold text-gray-900">Filters</h3>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="filter-locality" className="block text-sm font-medium text-gray-700 mb-1">
           Locality
         </label>
         <select
+          id="filter-locality"
+          name="locality"
           value={locality}
           onChange={(e) => setLocality(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
@@ -74,10 +76,12 @@ export default function FilterPanel({ properties, onFilterChange }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="filter-bhk" className="block text-sm font-medium text-gray-700 mb-1">
           BHK
         </label>
         <select
+          id="filter-bhk"
+          name="bhk"
           value={bhk}
           onChange={(e) => setBhk(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
@@ -91,10 +95,12 @@ export default function FilterPanel({ properties, onFilterChange }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="filter-status" className="block text-sm font-medium text-gray-700 mb-1">
           Status
         </label>
         <select
+          id="filter-status"
+          name="status"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
@@ -107,10 +113,12 @@ export default function FilterPanel({ properties, onFilterChange }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="filter-max-price" className="block text-sm font-medium text-gray-700 mb-1">
           Max Price: ₹{(maxPrice / 100000).toFixed(0)} L
         </label>
         <input
+          id="filter-max-price"
+          name="maxPrice"
           type="range"
           min="1000000"
           max="50000000"

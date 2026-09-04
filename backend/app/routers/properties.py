@@ -56,8 +56,20 @@ def list_properties(
     total = query.count()
     properties = query.all()
 
+    property_ids = [p.id for p in properties]
+    images = db.query(PropertyImage).filter(PropertyImage.property_id.in_(property_ids)).all()
+    images_by_property = {}
+    for img in images:
+        images_by_property.setdefault(img.property_id, []).append(img.image_url)
+
+    results = []
+    for p in properties:
+        item = PropertyResponse.model_validate(p).model_dump()
+        item["images"] = images_by_property.get(p.id, [])
+        results.append(item)
+
     return {
-        "properties": [PropertyResponse.model_validate(p) for p in properties],
+        "properties": results,
         "total": total,
     }
 
@@ -67,10 +79,20 @@ def get_property(property_id: UUID, db: Session = Depends(get_db)):
     prop = db.query(Property).filter(Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
+
+    images = (
+        db.query(PropertyImage)
+        .filter(PropertyImage.property_id == property_id)
+        .all()
+    )
+    image_urls = [img.image_url for img in images]
+
+    amenity_names = [a.name for a in prop.amenities] if hasattr(prop, "amenities") else []
+
     return {
         "property": PropertyResponse.model_validate(prop),
-        "images": [],
-        "amenities": [],
+        "images": image_urls,
+        "amenities": amenity_names,
     }
 
 
@@ -144,3 +166,4 @@ def upload_property_image(
     db.refresh(new_image)
 
     return {"image_url": image_url}
+
