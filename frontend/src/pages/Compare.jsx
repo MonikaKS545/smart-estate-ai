@@ -33,12 +33,18 @@ export default function Compare() {
   }
 
   if (properties.length < 2) {
-    return (
-      <div className="p-6 text-center text-gray-500 border border-gray-200 rounded-xl m-6">
-        Select at least 2 properties to compare.
-      </div>
-    );
-  }
+  return (
+    <div className="p-6 text-center text-gray-500 border border-gray-200 rounded-xl m-6 space-y-3">
+      <p>Select at least 2 properties to compare.</p>
+      <button
+        onClick={() => navigate("/search")}
+        className="text-sm font-medium text-blue-600 hover:text-blue-700 underline"
+      >
+        Go to Search
+      </button>
+    </div>
+  );
+}
 
   return (
     <div className="p-6 space-y-4">
