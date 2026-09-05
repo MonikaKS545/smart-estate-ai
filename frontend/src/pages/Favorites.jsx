@@ -47,7 +47,7 @@ export default function Favorites() {
   }
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-6 md:p-8 animate-fade-in-up">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">My Properties</h1>
 
       {properties.length === 0 ? (

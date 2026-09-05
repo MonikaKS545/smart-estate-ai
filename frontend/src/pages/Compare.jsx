@@ -47,7 +47,7 @@ export default function Compare() {
 }
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-4 animate-fade-in-up">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">
           Comparing {properties.length} Properties
