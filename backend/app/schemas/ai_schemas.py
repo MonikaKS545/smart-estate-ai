@@ -42,6 +42,7 @@ class NearbyFacilities(BaseModel):
 class LocationIntelResponse(BaseModel):
     nearby: NearbyFacilities
     location_score: int
+    data_source: str = "live"
 
 
 class AnalyzePropertyResponse(BaseModel):
