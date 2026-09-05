@@ -4,7 +4,7 @@ from uuid import UUID
 
 from app.database import get_db
 from app.models.user import User
-from app.models.common import Favorite
+from app.models.common import Favorite, PropertyImage
 from app.models.property import Property
 from app.schemas.property import FavoriteCreate, PropertyResponse
 from app.core.deps import get_current_user
@@ -45,12 +45,21 @@ def list_favorites(
     property_map = {f.property_id: f.id for f in favorites}
     property_ids = list(property_map.keys())
     properties = db.query(Property).filter(Property.id.in_(property_ids)).all()
-    return {
-        "properties": [
-            {**PropertyResponse.model_validate(p).model_dump(), "favorite_id": str(property_map[p.id])}
-            for p in properties
-        ]
-    }
+
+    images = db.query(PropertyImage).filter(PropertyImage.property_id.in_(property_ids)).all()
+    images_by_property = {}
+    for img in images:
+        images_by_property.setdefault(img.property_id, []).append(img.image_url)
+
+    results = []
+    for p in properties:
+        item = PropertyResponse.model_validate(p).model_dump()
+        item["images"] = images_by_property.get(p.id, [])
+        item["favorite_id"] = str(property_map[p.id])
+        results.append(item)
+
+    return {"properties": results}
+
 
 @router.delete("/{favorite_id}")
 def remove_favorite(

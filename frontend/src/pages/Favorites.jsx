@@ -1,24 +1,34 @@
+import { useState, useEffect } from "react";
 import PropertyCard from "../components/PropertyCard";
-import mockProperties from "../mocks/mockProperties";
+import client from "../api/client";
 
-/**
- * Favorites ("My Properties") page.
- *
- * Props:
- *  - propertyIds: array of favorited property ids. Defaults to a
- *    small demo set so this page is testable standalone; in practice
- *    PropertySearch.jsx will pass down the user's real selections
- *    (heart-toggle state, same lifted-state pattern as Compare).
- *  - onRemove: optional handler called with a property id when the
- *    user clicks "Remove" on a saved property.
- */
-export default function Favorites({ propertyIds = [1, 5, 9], onRemove }) {
-  const isLoading = false;
-  const error = null;
+export default function Favorites() {
+  const [properties, setProperties] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const properties = propertyIds
-    .map((id) => mockProperties.find((p) => p.id === id))
-    .filter(Boolean);
+  useEffect(() => {
+    async function loadFavorites() {
+      try {
+        const res = await client.get("/favorites");
+        setProperties(res.data.properties);
+      } catch (err) {
+        setError(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadFavorites();
+  }, []);
+
+  async function handleRemove(propertyId, favoriteId) {
+    try {
+      await client.delete(`/favorites/${favoriteId}`);
+      setProperties((prev) => prev.filter((p) => p.id !== propertyId));
+    } catch (err) {
+      console.error("Failed to remove favorite", err);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -50,14 +60,12 @@ export default function Favorites({ propertyIds = [1, 5, 9], onRemove }) {
           {properties.map((property) => (
             <div key={property.id} className="space-y-2">
               <PropertyCard property={property} />
-              {onRemove && (
-                <button
-                  onClick={() => onRemove(property.id)}
-                  className="w-full text-sm text-red-600 hover:text-red-700 font-medium"
-                >
-                  Remove from Favorites
-                </button>
-              )}
+              <button
+                onClick={() => handleRemove(property.id, property.favorite_id)}
+                className="w-full text-sm text-red-600 hover:text-red-700 font-medium"
+              >
+                Remove from Favorites
+              </button>
             </div>
           ))}
         </div>
