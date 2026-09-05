@@ -1,6 +1,6 @@
 from app.database import SessionLocal
 from app.models.property import Property
-from app.rag.vector_store import upsert_property, collection_count
+from app.rag.vector_store import upsert_property, collection_count, reset_collection
 
 
 def property_to_text(p: Property) -> str:
@@ -20,6 +20,7 @@ def property_to_text(p: Property) -> str:
 
 def run():
     db = SessionLocal()
+    reset_collection()
     try:
         properties = db.query(Property).filter(Property.status == "approved").all()
         print(f"Found {len(properties)} approved properties in DB")

@@ -33,3 +33,9 @@ def search_properties(query: str, top_k: int = 5):
 
 def collection_count():
     return _collection.count()
+
+
+def reset_collection():
+    global _collection
+    _client.delete_collection(name=COLLECTION_NAME)
+    _collection = _client.get_or_create_collection(name=COLLECTION_NAME)
