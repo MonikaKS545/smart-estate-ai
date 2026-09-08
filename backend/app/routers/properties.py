@@ -73,7 +73,26 @@ def list_properties(
         "total": total,
     }
 
+@router.get("/mine")
+def list_my_properties(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    properties = db.query(Property).filter(Property.agent_id == current_user.id).all()
 
+    property_ids = [p.id for p in properties]
+    images = db.query(PropertyImage).filter(PropertyImage.property_id.in_(property_ids)).all()
+    images_by_property = {}
+    for img in images:
+        images_by_property.setdefault(img.property_id, []).append(img.image_url)
+
+    results = []
+    for p in properties:
+        item = PropertyResponse.model_validate(p).model_dump()
+        item["images"] = images_by_property.get(p.id, [])
+        results.append(item)
+
+    return {"properties": results}
 @router.get("/{property_id}")
 def get_property(property_id: UUID, db: Session = Depends(get_db)):
     prop = db.query(Property).filter(Property.id == property_id).first()
