@@ -9,3 +9,4 @@ node_modules/
 frontend/node_modules/
 backend/uploads/*
 backend/chroma_db/
+backend/venv_old/
