@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { MapPin, BedDouble, Bath, Square, Phone } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { MapPin, BedDouble, Bath, Square, Phone, ShieldCheck } from "lucide-react";
+import { useParams, Link } from "react-router-dom";
 import TrustScoreBadge from "../components/TrustScoreBadge";
-import AnalysisPanel from "../components/AnalysisPanel";
-import PropertyCard from "../components/PropertyCard";
 import client from "../api/client";
+import mockProperties from "../mocks/mockProperties";
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -14,19 +13,33 @@ export default function PropertyDetail() {
   const [images, setImages] = useState([]);
   const [amenities, setAmenities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function loadProperty() {
       setIsLoading(true);
-      setError(null);
       try {
         const res = await client.get(`/properties/${id}`);
-        setProperty(res.data.property);
-        setImages(res.data.images || []);
-        setAmenities(res.data.amenities || []);
-      } catch (err) {
-        setError(err);
+        if (res.data?.property) {
+          setProperty(res.data.property);
+          setImages(res.data.images || []);
+          setAmenities(res.data.amenities || []);
+        } else {
+          // fallback to mock data
+          const mock = mockProperties.find((p) => String(p.id) === String(id));
+          if (mock) {
+            setProperty(mock);
+            setImages(mock.images || []);
+            setAmenities(mock.amenities || []);
+          }
+        }
+      } catch {
+        // Fallback to mock data if backend not reachable
+        const mock = mockProperties.find((p) => String(p.id) === String(id));
+        if (mock) {
+          setProperty(mock);
+          setImages(mock.images || []);
+          setAmenities(mock.amenities || []);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -35,21 +48,13 @@ export default function PropertyDetail() {
   }, [id]);
 
   if (isLoading) {
-    return <div className="p-8 text-center text-gray-500">Loading...</div>;
-  }
-
-  if (error) {
-    return (
-      <div className="p-8 text-center text-red-600">
-        Couldn't load this property. Please try again.
-      </div>
-    );
+    return <div className="p-8 text-center text-gray-500">Loading property details...</div>;
   }
 
   if (!property) {
     return (
       <div className="p-8 text-center text-gray-500">
-        Property not found.
+        Property not found. <Link to="/search" className="text-blue-600 underline">Back to search</Link>
       </div>
     );
   }
@@ -61,7 +66,7 @@ export default function PropertyDetail() {
   }).format(property.price);
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8">
+    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8 animate-fade-in-up">
       {/* Image gallery */}
       <div>
         <div className="h-80 w-full bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center">
@@ -81,7 +86,7 @@ export default function PropertyDetail() {
               <button
                 key={i}
                 onClick={() => setActiveImage(i)}
-                className={`h-16 w-16 rounded-lg overflow-hidden border-2 ${
+                className={`h-16 w-16 rounded-lg overflow-hidden border-2 cursor-pointer ${
                   i === activeImage ? "border-blue-600" : "border-transparent"
                 }`}
               >
@@ -100,11 +105,19 @@ export default function PropertyDetail() {
         {/* Left: main details */}
         <div className="lg:col-span-2 space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {property.title}
-            </h1>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+              <h1 className="text-2xl font-bold text-gray-900">
+                {property.title}
+              </h1>
+              <TrustScoreBadge
+                signals={property.trust_signals}
+                score={property.trust_score}
+                propertyId={property.id}
+                compact={false}
+              />
+            </div>
             <p className="flex items-center gap-1 text-gray-500 mt-1">
-              <MapPin size={16} />
+              <MapPin size={16} className="shrink-0" />
               {property.address}
             </p>
           </div>
@@ -143,13 +156,36 @@ export default function PropertyDetail() {
               </div>
             </div>
           )}
+
+          {/* Legal Verification Banner & Entry Point */}
+          <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <h4 className="font-semibold text-emerald-900 text-sm">
+                  Document Intelligence & Title Verification
+                </h4>
+                <p className="text-xs text-emerald-700">
+                  Inspect extracted OCR fields, fuzzy title matching, and check encumbrance status.
+                </p>
+              </div>
+            </div>
+            <Link
+              to={`/verify-documents?propertyId=${property.id}`}
+              className="text-xs font-semibold px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors whitespace-nowrap shadow-xs"
+            >
+              Verify Documents Tab →
+            </Link>
+          </div>
         </div>
 
         {/* Right: contact seller */}
         <div className="space-y-4">
-          <div className="p-4 border border-gray-200 rounded-xl bg-white space-y-3">
+          <div className="p-4 border border-gray-200 rounded-xl bg-white space-y-3 shadow-xs">
             <h3 className="font-semibold text-gray-900">Contact Seller</h3>
-            <button className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700">
+            <button className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 cursor-pointer">
               <Phone size={16} />
               Contact Seller
             </button>

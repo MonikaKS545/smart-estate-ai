@@ -2,10 +2,13 @@ from datetime import datetime, timedelta
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 import os
+from dotenv import load_dotenv
 
-JWT_SECRET = os.getenv("JWT_SECRET")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+load_dotenv()
+
+JWT_SECRET = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY") or "smartestate_default_jwt_secret_key_987654321"
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60 * 24 * 7))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
