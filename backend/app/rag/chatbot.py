@@ -1,7 +1,10 @@
 import os
+import re
 from dotenv import load_dotenv
 from groq import Groq
+from sqlalchemy import func
 from app.rag.vector_store import search_properties
+from app.models.property import Property, PropertyStatusEnum
 
 load_dotenv()
 
@@ -25,6 +28,50 @@ look at the provided data and mention the closest available alternatives instead
 they are not an exact match. Only say you have nothing relevant if truly nothing
 in the given data is reasonably close.
 Keep answers concise and helpful."""
+
+# Simple keyword check for aggregate/counting questions — these can't be
+# answered correctly by semantic search over a top-5 sample, so they're
+# routed to a direct database count instead of the LLM/RAG path.
+COUNT_PATTERNS = [
+    r"\bhow many\b",
+    r"\btotal (number of )?propert",
+    r"\bnumber of propert",
+    r"\bcount of propert",
+]
+
+
+def is_count_query(query: str) -> bool:
+    q = query.lower()
+    return any(re.search(pattern, q) for pattern in COUNT_PATTERNS)
+
+
+def answer_count_query(db) -> dict:
+    total = db.query(func.count(Property.id)).scalar()
+    approved = (
+        db.query(func.count(Property.id))
+        .filter(Property.status == PropertyStatusEnum.approved)
+        .scalar()
+    )
+    pending = (
+        db.query(func.count(Property.id))
+        .filter(Property.status == PropertyStatusEnum.pending)
+        .scalar()
+    )
+    sold = (
+        db.query(func.count(Property.id))
+        .filter(Property.status == PropertyStatusEnum.sold)
+        .scalar()
+    )
+
+    response_text = (
+        f"We currently have {total} properties listed in total — "
+        f"{approved} available, {pending} pending review, and {sold} sold."
+    )
+
+    return {
+        "response_text": response_text,
+        "referenced_property_ids": [],
+    }
 
 
 def get_relevant_properties(query: str, top_k: int = 5):
@@ -52,7 +99,12 @@ def format_properties_for_prompt(properties):
     return "\n".join(lines)
 
 
-def answer_query(query: str, top_k: int = 5):
+def answer_query(query: str, top_k: int = 5, db=None):
+    # Counting/aggregate questions bypass RAG entirely — they need a
+    # real database count, not a 5-result semantic sample.
+    if db is not None and is_count_query(query):
+        return answer_count_query(db)
+
     client = get_groq_client()
     if not client:
         return {
@@ -92,6 +144,7 @@ Answer the user's question using only the above data."""
         "response_text": response_text,
         "referenced_property_ids": [p["property_id"] for p in matches],
     }
+
 
 if __name__ == "__main__":
     result = answer_query("affordable 3 BHK in Bangalore")

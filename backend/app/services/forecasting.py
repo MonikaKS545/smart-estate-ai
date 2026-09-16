@@ -1,7 +1,10 @@
+from fastapi import HTTPException
 import math
 from typing import Dict, List
 
 def forecast_property_value(current_price: float, city: str, years: int = 5) -> Dict:
+    if current_price <= 0:
+     raise HTTPException(status_code=422, detail="current_price must be greater than 0")
     """
     Predict future property value up to 5 years based on historical growth rates & market trends.
     """

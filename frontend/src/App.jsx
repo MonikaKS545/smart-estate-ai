@@ -14,6 +14,9 @@ import Compare from './pages/Compare';
 import Favorites from './pages/Favorites';
 import ChatAssistant from './pages/ChatAssistant';
 import DocumentVerification from './pages/DocumentVerification';
+import AddProperty from './pages/AddProperty';
+import EditProperty from './pages/EditProperty';
+import AdminProperties from './pages/AdminProperties';
 
 function App() {
   return (
@@ -47,6 +50,30 @@ function App() {
           }
         />
         <Route
+  path="/agent/edit-property/:propertyId"
+  element={
+    <ProtectedRoute allowedRoles={['agent']}>
+      <EditProperty />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/agent/edit-property/:propertyId"
+  element={
+    <ProtectedRoute allowedRoles={['agent']}>
+      <EditProperty />
+    </ProtectedRoute>
+  }
+/>
+        <Route
+  path="/agent/add-property"
+  element={
+    <ProtectedRoute allowedRoles={['agent']}>
+      <AddProperty />
+    </ProtectedRoute>
+  }
+/>
+        <Route
           path="/admin"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
@@ -54,6 +81,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/admin/properties"
+  element={
+    <ProtectedRoute allowedRoles={['admin']}>
+      <AdminProperties />
+    </ProtectedRoute>
+  }
+/>
       </Routes>
     </BrowserRouter>
   );

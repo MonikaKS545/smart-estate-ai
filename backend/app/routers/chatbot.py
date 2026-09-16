@@ -39,7 +39,8 @@ def send_chat_message(
     db.commit()
 
     # Run the RAG pipeline
-    result = answer_query(payload.message)
+        # Run the RAG pipeline
+    result = answer_query(payload.message, db=db)
 
     # Save the assistant's reply
     assistant_msg = ChatMessage(

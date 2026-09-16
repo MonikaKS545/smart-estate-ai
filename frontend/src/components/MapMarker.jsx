@@ -8,11 +8,10 @@ import L from "leaflet";
  *
  * Color reflects property status, matching PropertyCard's status colors.
  */
-
 const statusColors = {
-  available: "#16a34a", // green-600
-  sold: "#dc2626", // red-600
-  pending: "#ca8a04", // yellow-600
+  approved: "#16a34a", // green-600 — "available"
+  sold: "#dc2626",     // red-600
+  pending: "#ca8a04",  // yellow-600
 };
 
 export function createMapMarkerIcon(status) {

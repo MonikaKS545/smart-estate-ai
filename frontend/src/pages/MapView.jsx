@@ -1,30 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { createMapMarkerIcon } from "../components/MapMarker";
 import PropertyCard from "../components/PropertyCard";
-import mockProperties from "../mocks/mockProperties";
+import client from "../api/client";
 
-/**
- * MapView page.
- *
- * Note on "click to detail": Part 1's router isn't set up yet, so
- * clicking a marker's "View Details" button can't literally navigate.
- * Instead it sets `selectedProperty` in local state, which renders a
- * PropertyCard below the map. Once routing exists, swap that click
- * handler for `navigate(`/property/${id}`)` — one line change.
- */
 export default function MapView() {
-  const [selectedProperty, setSelectedProperty] = useState(null);
-  const isLoading = false;
-  const error = null;
+  const navigate = useNavigate();
 
-  // Center the map on the average of all property coordinates.
-  const avgLat =
-    mockProperties.reduce((sum, p) => sum + p.latitude, 0) /
-    mockProperties.length;
-  const avgLng =
-    mockProperties.reduce((sum, p) => sum + p.longitude, 0) /
-    mockProperties.length;
+  const [properties, setProperties] = useState([]);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function loadProperties() {
+      try {
+        const res = await client.get("/properties");
+        // Only properties with real coordinates AND not rejected
+        // should appear on the public map.
+        const withCoords = res.data.properties.filter(
+          (p) =>
+            p.latitude != null &&
+            p.longitude != null &&
+            p.status !== "rejected"
+        );
+        setProperties(withCoords);
+      } catch (err) {
+        setError(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadProperties();
+  }, []);
 
   if (isLoading) {
     return <div className="p-8 text-center text-gray-500">Loading map...</div>;
@@ -37,6 +46,19 @@ export default function MapView() {
       </div>
     );
   }
+
+  if (properties.length === 0) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        No properties with location data yet.
+      </div>
+    );
+  }
+
+  const avgLat =
+    properties.reduce((sum, p) => sum + p.latitude, 0) / properties.length;
+  const avgLng =
+    properties.reduce((sum, p) => sum + p.longitude, 0) / properties.length;
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -53,7 +75,7 @@ export default function MapView() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          {mockProperties.map((property) => (
+          {properties.map((property) => (
             <Marker
               key={property.id}
               position={[property.latitude, property.longitude]}
@@ -84,7 +106,10 @@ export default function MapView() {
             Selected Property
           </h3>
           <div className="max-w-sm">
-            <PropertyCard property={selectedProperty} />
+            <PropertyCard
+              property={selectedProperty}
+              onClick={() => navigate(`/property/${selectedProperty.id}`)}
+            />
           </div>
         </div>
       )}

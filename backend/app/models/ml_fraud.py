@@ -16,7 +16,7 @@ class FraudScoreRequest(BaseModel):
     parking: int
     city: str
     amenities: List[str] = []
-    aadhar_number: Optional[str] = None
+    is_verified: bool = False
 
 class FraudFlag(BaseModel):
     level: str
@@ -27,4 +27,4 @@ class FraudScoreResponse(BaseModel):
     risk_level: str
     flags: List[FraudFlag]
     reasons: List[str]
-    aadhar_valid: Optional[bool] = None
+    is_verified: bool = False

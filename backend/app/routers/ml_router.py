@@ -48,7 +48,7 @@ def fraud_score(data: FraudScoreRequest):
             parking=data.parking,
             city=data.city,
             amenities=data.amenities,
-            aadhar_number=data.aadhar_number,
+            is_verified=data.is_verified,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

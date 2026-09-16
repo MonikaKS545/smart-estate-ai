@@ -161,7 +161,7 @@ def analyze_property(property_id: str, user_id: str = None):
         document_score = get_document_score(db, property_id)
 
         # This part's own logic
-        location_result = get_location_intel(float(prop.latitude), float(prop.longitude)) if prop.latitude and prop.longitude else None
+        location_result = get_location_intel(float(prop.latitude), float(prop.longitude), city=prop.city) if prop.latitude and prop.longitude else None
         location_score = location_result["location_score"] if location_result else 0
 
         amenity_score = get_amenity_score(db, prop)

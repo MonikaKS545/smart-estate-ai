@@ -125,7 +125,7 @@ def extract_property_address(text: str) -> Optional[str]:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             addr = match.group(1).strip()
-            addr = re.split(r'(?:Survey|Date|Registration|Area|Owner):', addr, flags=re.IGNORECASE)[0].strip()
+            addr = re.split(r'(?:Survey(?:\s*Number|\s*No\.?)?|Date|Registration(?:\s*Number)?|Area|Owner(?:\s*Name)?)\s*:', addr, flags=re.IGNORECASE)[0].strip()
             return addr
     return None
 

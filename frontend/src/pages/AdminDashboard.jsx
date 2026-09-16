@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   BarChart,
@@ -11,17 +10,7 @@ import {
 } from "recharts";
 import { Users, Building2, Flag, ShieldAlert } from "lucide-react";
 import mockProperties from "../mocks/mockProperties";
-
-/**
- * AdminDashboard page.
- *
- * Note: the spec's mocks/ folder (per its own file list) has no
- * mockUsers.js or mockReports.js, so small mock datasets for both are
- * defined here — same approach as the fraud data on PropertyDetail
- * and the verification result on DocumentVerification — rather than
- * adding unlisted mock files.
- */
-
+import { Link } from "react-router-dom"
 const mockUsers = [
   { id: 1, name: "Ramesh Kumar", role: "agent", joined: "2024-01-12" },
   { id: 2, name: "Priya Sharma", role: "buyer", joined: "2024-03-05" },
@@ -81,6 +70,12 @@ export default function AdminDashboard() {
   return (
     <div className="p-6 md:p-8 space-y-8">
       <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+      <Link
+  to="/admin/properties"
+  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+>
+  Review Pending Properties
+</Link>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {stats.map(({ label, value, Icon }) => (
@@ -189,4 +184,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-

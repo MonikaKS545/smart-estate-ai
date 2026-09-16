@@ -1,42 +1,5 @@
 from typing import List, Optional
 
-# Verhoeff Algorithm tables (UIDAI's real Aadhaar checksum)
-_D = [
-    [0,1,2,3,4,5,6,7,8,9],
-    [1,2,3,4,0,6,7,8,9,5],
-    [2,3,4,0,1,7,8,9,5,6],
-    [3,4,0,1,2,8,9,5,6,7],
-    [4,0,1,2,3,9,5,6,7,8],
-    [5,9,8,7,6,0,4,3,2,1],
-    [6,5,9,8,7,1,0,4,3,2],
-    [7,6,5,9,8,2,1,0,4,3],
-    [8,7,6,5,9,3,2,1,0,4],
-    [9,8,7,6,5,4,3,2,1,0],
-]
-_P = [
-    [0,1,2,3,4,5,6,7,8,9],
-    [1,5,7,6,2,8,3,0,9,4],
-    [5,8,0,3,7,9,6,1,4,2],
-    [8,9,1,6,0,4,3,5,2,7],
-    [9,4,5,3,1,2,6,8,7,0],
-    [4,2,8,6,5,7,3,9,0,1],
-    [2,7,9,3,8,0,6,4,1,5],
-    [7,0,4,6,9,1,3,2,5,8],
-]
-
-
-def validate_aadhaar(number: str) -> bool:
-    """Check Aadhaar using the Verhoeff algorithm — same as UIDAI uses."""
-    num = str(number).strip().replace(" ", "").replace("-", "")
-    if not num.isdigit() or len(num) != 12:
-        return False
-    if num[0] in "01":
-        return False
-    c = 0
-    for i, d in enumerate(reversed(num)):
-        c = _D[c][_P[i % 8][int(d)]]
-    return c == 0
-
 
 CITY_PRICE = {
     "Whitefield": 6500, "Koramangala": 9500, "Indiranagar": 11000,
@@ -54,7 +17,7 @@ class FraudScorer:
               area_sqft: float, bhk: int, bedrooms: int, floor: int,
               total_floors: int, property_age_years: int, furnishing: str,
               parking: int, city: str, amenities: List[str],
-              aadhar_number: Optional[str] = None) -> dict:
+              is_verified: bool = False) -> dict:
 
         flags    = []
         reasons  = []
@@ -101,17 +64,12 @@ class FraudScorer:
             flags.append({"level": "low", "reason": "Villa with zero parking is unusual"})
             risk_pts += 5
 
-        # Aadhaar validation
-        aadhar_valid = None
-        if aadhar_number:
-            aadhar_valid = validate_aadhaar(aadhar_number)
-            if not aadhar_valid:
-                flags.append({"level": "high",
-                              "reason": "Aadhaar number failed checksum — likely fake"})
-                reasons.append("Invalid Aadhaar number — owner identity not verified")
-                risk_pts += 30
-            else:
-                reasons.append("Aadhaar number passed checksum validation")
+        # Owner identity check (based on account verification, not ID number)
+        if not is_verified:
+            flags.append({"level": "low",
+                          "reason": "Listing owner has not verified their account"})
+            reasons.append("Owner account is unverified — proceed with extra caution")
+            risk_pts += 10
 
         trust_score = max(0, 100 - risk_pts)
         risk_level  = "low" if trust_score >= 80 else ("medium" if trust_score >= 50 else "high")
@@ -124,7 +82,7 @@ class FraudScorer:
             "risk_level":   risk_level,
             "flags":        flags,
             "reasons":      reasons,
-            "aadhar_valid": aadhar_valid,
+            "is_verified": is_verified,
         }
 
 
