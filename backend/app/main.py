@@ -4,6 +4,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.database import Base, engine
+import app.models.user
+import app.models.property
+import app.models.common
+import app.models.inquiry
+
+Base.metadata.create_all(bind=engine)
+
 from app.routers import (
     auth, properties, favorites, saved_searches, admin, ml_router,
     inquiries, ai_assistant, financials, analytics, forecasting, 

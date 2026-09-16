@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import (
     Column, String, Integer, Numeric, Boolean, DateTime, Enum, ForeignKey, JSON
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
 
 
@@ -40,7 +40,7 @@ class SavedSearch(Base):
     __tablename__ = "saved_searches"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    filters_json = Column(JSONB)
+    filters_json = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -72,8 +72,8 @@ class DocumentVerification(Base):
     __tablename__ = "document_verifications"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"))
-    extracted_json = Column(JSONB)
-    match_result_json = Column(JSONB)
+    extracted_json = Column(JSON)
+    match_result_json = Column(JSON)
     status = Column(Enum(VerificationStatusEnum), default=VerificationStatusEnum.pending)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -84,7 +84,7 @@ class FraudAnalysis(Base):
     property_id = Column(UUID(as_uuid=True), ForeignKey("properties.id"))
     trust_score = Column(Integer)
     risk_level = Column(String)
-    reasons_json = Column(JSONB)
+    reasons_json = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

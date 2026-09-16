@@ -1,7 +1,7 @@
 // mockProperties.js
-// Mock data matching Part 1's property shape exactly:
+// Mock data matching property shape with enriched Trust Verification Signals:
 // { id, title, price, area_sqft, bhk, bathrooms, city, address,
-//   latitude, longitude, images: [url], amenities: [name], status }
+//   latitude, longitude, images: [url], amenities: [name], status, trust_signals }
 
 const mockProperties = [
   {
@@ -18,6 +18,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop1a/800/600", "https://picsum.photos/seed/prop1b/800/600"],
     amenities: ["Parking", "Gym", "Power Backup", "Lift"],
     status: "available",
+    trust_signals: {
+      rera_status: "verified",
+      encumbrance_status: "clear",
+      title_clarity: "clear",
+      document_completeness: 1.0,
+      owner_match: "match",
+    },
   },
   {
     id: 2,
@@ -33,6 +40,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop2a/800/600"],
     amenities: ["Parking", "Security", "Lift"],
     status: "available",
+    trust_signals: {
+      rera_status: "verified",
+      encumbrance_status: "pending",
+      title_clarity: "clear",
+      document_completeness: 0.75,
+      owner_match: "match",
+    },
   },
   {
     id: 3,
@@ -48,6 +62,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop3a/800/600", "https://picsum.photos/seed/prop3b/800/600"],
     amenities: ["Parking", "Gym", "Swimming Pool", "Garden", "Power Backup"],
     status: "available",
+    trust_signals: {
+      rera_status: "verified",
+      encumbrance_status: "clear",
+      title_clarity: "clear",
+      document_completeness: 0.9,
+      owner_match: "match",
+    },
   },
   {
     id: 4,
@@ -63,6 +84,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop4a/800/600"],
     amenities: ["Lift", "Security"],
     status: "sold",
+    trust_signals: {
+      rera_status: "not_applicable",
+      encumbrance_status: "clear",
+      title_clarity: "clear",
+      document_completeness: 0.8,
+      owner_match: "pending",
+    },
   },
   {
     id: 5,
@@ -78,6 +106,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop5a/800/600", "https://picsum.photos/seed/prop5b/800/600"],
     amenities: ["Parking", "Gym", "Lift", "Power Backup"],
     status: "available",
+    trust_signals: {
+      rera_status: "verified",
+      encumbrance_status: "clear",
+      title_clarity: "clear",
+      document_completeness: 1.0,
+      owner_match: "match",
+    },
   },
   {
     id: 6,
@@ -93,6 +128,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop6a/800/600"],
     amenities: ["Parking", "Security"],
     status: "pending",
+    trust_signals: {
+      rera_status: "pending",
+      encumbrance_status: "pending",
+      title_clarity: "pending",
+      document_completeness: 0.4,
+      owner_match: "pending",
+    },
   },
   {
     id: 7,
@@ -108,6 +150,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop7a/800/600", "https://picsum.photos/seed/prop7b/800/600", "https://picsum.photos/seed/prop7c/800/600"],
     amenities: ["Parking", "Gym", "Swimming Pool", "Clubhouse", "Power Backup", "Lift"],
     status: "available",
+    trust_signals: {
+      rera_status: "verified",
+      encumbrance_status: "clear",
+      title_clarity: "clear",
+      document_completeness: 1.0,
+      owner_match: "match",
+    },
   },
   {
     id: 8,
@@ -123,6 +172,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop8a/800/600"],
     amenities: ["Parking", "Security", "Lift"],
     status: "available",
+    trust_signals: {
+      rera_status: "unregistered",
+      encumbrance_status: "clear",
+      title_clarity: "pending",
+      document_completeness: 0.3,
+      owner_match: "pending",
+    },
   },
   {
     id: 9,
@@ -138,6 +194,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop9a/800/600", "https://picsum.photos/seed/prop9b/800/600"],
     amenities: ["Parking", "Gym", "Swimming Pool", "Garden"],
     status: "available",
+    trust_signals: {
+      rera_status: "verified",
+      encumbrance_status: "clear",
+      title_clarity: "clear",
+      document_completeness: 0.85,
+      owner_match: "match",
+    },
   },
   {
     id: 10,
@@ -153,6 +216,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop10a/800/600"],
     amenities: ["Lift", "Security"],
     status: "available",
+    trust_signals: {
+      rera_status: null,
+      encumbrance_status: null,
+      title_clarity: null,
+      document_completeness: null,
+      owner_match: null,
+    },
   },
   {
     id: 11,
@@ -168,6 +238,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop11a/800/600", "https://picsum.photos/seed/prop11b/800/600"],
     amenities: ["Parking", "Garden", "Power Backup"],
     status: "sold",
+    trust_signals: {
+      rera_status: "not_applicable",
+      encumbrance_status: "clear",
+      title_clarity: "clear",
+      document_completeness: 0.95,
+      owner_match: "match",
+    },
   },
   {
     id: 12,
@@ -183,6 +260,13 @@ const mockProperties = [
     images: ["https://picsum.photos/seed/prop12a/800/600"],
     amenities: ["Parking", "Gym", "Security", "Lift"],
     status: "available",
+    trust_signals: {
+      rera_status: "verified",
+      encumbrance_status: "pending",
+      title_clarity: "clear",
+      document_completeness: 0.65,
+      owner_match: "match",
+    },
   },
 ];
 
