@@ -118,6 +118,15 @@ async def verify_document(
     )
 
 
+@router.get("/property/{property_id}")
+def get_documents_by_property(property_id: str):
+    """
+    Lists all documents (and their verification status) for a given property.
+    """
+    docs = [doc for doc in DOCUMENTS_STORE.values() if doc["property_id"] == property_id]
+    return {"property_id": property_id, "documents": docs}
+
+
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(document_id: str):
     """

@@ -1,13 +1,15 @@
 from pydantic import BaseModel
+from pydantic import field_validator
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
+from app.models.property import PropertyTypeEnum
 
 
 class PropertyCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    property_type: Optional[str] = None
+    property_type: Optional[PropertyTypeEnum] = None
     listing_type: str  # "buy" or "rent"
     price: float
     area_sqft: Optional[float] = None
@@ -23,11 +25,18 @@ class PropertyCreate(BaseModel):
     address: Optional[str] = None
     city: Optional[str] = None
 
+    @field_validator("city", mode="before")
+    @classmethod
+    def normalize_city(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        return v.strip().title()
+
 
 class PropertyUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    property_type: Optional[str] = None
+    property_type: Optional[PropertyTypeEnum] = None
     listing_type: Optional[str] = None
     price: Optional[float] = None
     area_sqft: Optional[float] = None
@@ -44,13 +53,20 @@ class PropertyUpdate(BaseModel):
     city: Optional[str] = None
     status: Optional[str] = None
 
+    @field_validator("city", mode="before")
+    @classmethod
+    def normalize_city(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        return v.strip().title()
+
 
 class PropertyResponse(BaseModel):
     id: UUID
     agent_id: Optional[UUID]
     title: str
     description: Optional[str]
-    property_type: Optional[str]
+    property_type: Optional[PropertyTypeEnum]
     listing_type: Optional[str]
     price: float
     area_sqft: Optional[float]

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.models.user import User
 from app.models.property import Property
+from app.schemas.property import PropertyResponse
 from app.core.deps import require_role
 from typing import Optional
 
@@ -28,17 +29,7 @@ def list_all_properties(
 
     return {
         "properties": [
-            {
-                "id": str(p.id),
-                "title": p.title,
-                "price": float(p.price) if p.price is not None else None,
-                "listing_type": p.listing_type.value if p.listing_type else None,
-                "property_type": p.property_type,
-                "city": p.city,
-                "status": p.status.value,
-                "agent_id": str(p.agent_id) if p.agent_id else None,
-                "created_at": p.created_at.isoformat() if p.created_at else None,
-            }
+            PropertyResponse.model_validate(p).model_dump()
             for p in properties
         ]
     }
