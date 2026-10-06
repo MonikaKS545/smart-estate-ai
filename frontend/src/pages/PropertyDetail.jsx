@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MapPin, BedDouble, Bath, Square, Phone, ShieldCheck, TrendingUp, AlertCircle, CheckCircle, Loader2, DollarSign, ArrowUpRight, Building2, HeartPulse, Train, Bus, ShoppingBag, Utensils, Trees, MapPin as MapPinIcon, Star, Calculator, RefreshCw, Leaf } from "lucide-react";
+import { MapPin, BedDouble, Bath, Square, Phone, ShieldCheck, TrendingUp, AlertCircle, CheckCircle, Loader2, DollarSign, ArrowUpRight, Building2, HeartPulse, Train, Bus, ShoppingBag, Utensils, Trees, MapPin as MapPinIcon, Star, Calculator, RefreshCw, Leaf, X } from "lucide-react";
 import { useParams, Link } from "react-router-dom";
 import TrustScoreBadge from "../components/TrustScoreBadge";
 import client from "../api/client";
@@ -45,6 +45,17 @@ export default function PropertyDetail() {
     loan_tenure_years: 20,
     estimated_monthly_rent: 0,
   });
+
+  // Inquiry modal state
+  const [showInquiryModal, setShowInquiryModal] = useState(false);
+  const [inquiryForm, setInquiryForm] = useState({
+    inquiry_type: "schedule_visit",
+    message: "",
+    preferred_date: "",
+  });
+  const [inquirySubmitting, setInquirySubmitting] = useState(false);
+  const [inquiryError, setInquiryError] = useState(null);
+  const [inquirySuccess, setInquirySuccess] = useState(false);
 
   useEffect(() => {
     async function loadProperty() {
@@ -176,6 +187,36 @@ export default function PropertyDetail() {
   };
 
   // Handle EMI input change - debounced recalculation
+
+  const handleInquirySubmit = async (e) => {
+    e.preventDefault();
+    setInquirySubmitting(true);
+    setInquiryError(null);
+    try {
+      await client.post("/inquiries/", {
+        property_id: property.id,
+        inquiry_type: inquiryForm.inquiry_type,
+        message: inquiryForm.message || null,
+        preferred_date: inquiryForm.preferred_date ? new Date(inquiryForm.preferred_date).toISOString() : null,
+      });
+      setInquirySuccess(true);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setInquiryError("Please log in as a buyer to contact the seller.");
+      } else {
+        setInquiryError(err.response?.data?.detail || "Could not send your request.");
+      }
+    } finally {
+      setInquirySubmitting(false);
+    }
+  };
+
+  const closeInquiryModal = () => {
+    setShowInquiryModal(false);
+    setInquiryForm({ inquiry_type: "schedule_visit", message: "", preferred_date: "" });
+    setInquiryError(null);
+    setInquirySuccess(false);
+  };
   const handleEmiInputChange = (field, value) => {
     setEmiInputs(prev => ({ ...prev, [field]: value }));
   };
@@ -199,6 +240,7 @@ export default function PropertyDetail() {
   }).format(property.price);
 
   return (
+    <>
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8 animate-fade-in-up">
       {/* Image gallery */}
       <div>
@@ -909,7 +951,10 @@ export default function PropertyDetail() {
         <div className="space-y-4">
           <div className="p-4 border border-gray-200 rounded-xl bg-white space-y-3 shadow-xs">
             <h3 className="font-semibold text-gray-900">Contact Seller</h3>
-            <button className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 cursor-pointer">
+            <button
+              onClick={() => setShowInquiryModal(true)}
+              className="w-full flex items-center justify-center gap-2 bg-clay hover:bg-clay-dark text-ink rounded-lg py-2 text-sm font-medium cursor-pointer"
+            >
               <Phone size={16} />
               Contact Seller
             </button>
@@ -920,5 +965,112 @@ export default function PropertyDetail() {
         </div>
       </div>
     </div>
+
+    {/* Inquiry Modal */}
+    {showInquiryModal && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in-up"
+        onClick={closeInquiryModal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="inquiry-modal-title"
+      >
+        <div
+          className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden animate-fade-in-up"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            <h2 id="inquiry-modal-title" className="font-serif text-lg font-semibold text-ink">
+              {inquirySuccess ? "Request Sent" : "Contact Seller"}
+            </h2>
+            <button
+              onClick={closeInquiryModal}
+              className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {inquirySuccess ? (
+            <div className="p-6 text-center space-y-4">
+              <div className="mx-auto w-16 h-16 rounded-full bg-clay/10 flex items-center justify-center">
+                <CheckCircle size={28} className="text-clay" />
+              </div>
+              <p className="text-sage">Request sent. The agent will get back to you.</p>
+              <button
+                onClick={closeInquiryModal}
+                className="w-full bg-clay hover:bg-clay-dark text-ink font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleInquirySubmit} className="p-4 space-y-4">
+              {inquiryError && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                  {inquiryError}
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="inquiry-type" className="block mb-1 text-sm font-medium text-gray-700">
+                  Inquiry Type
+                </label>
+                <select
+                  id="inquiry-type"
+                  value={inquiryForm.inquiry_type}
+                  onChange={(e) => setInquiryForm((prev) => ({ ...prev, inquiry_type: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-clay focus:border-transparent"
+                >
+                  <option value="schedule_visit">Schedule a visit</option>
+                  <option value="general">General question</option>
+                  <option value="price_negotiation">Discuss price</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="inquiry-message" className="block mb-1 text-sm font-medium text-gray-700">
+                  Message (optional)
+                </label>
+                <textarea
+                  id="inquiry-message"
+                  value={inquiryForm.message}
+                  onChange={(e) => setInquiryForm((prev) => ({ ...prev, message: e.target.value }))}
+                  rows={3}
+                  placeholder="Any specific questions or details..."
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-clay focus:border-transparent"
+                />
+              </div>
+
+              {inquiryForm.inquiry_type === "schedule_visit" && (
+                <div>
+                  <label htmlFor="inquiry-date" className="block mb-1 text-sm font-medium text-gray-700">
+                    Preferred Date & Time
+                  </label>
+                  <input
+                    id="inquiry-date"
+                    type="datetime-local"
+                    value={inquiryForm.preferred_date}
+                    onChange={(e) => setInquiryForm((prev) => ({ ...prev, preferred_date: e.target.value }))}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-clay focus:border-transparent"
+                  />
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={inquirySubmitting}
+                className="w-full bg-clay hover:bg-clay-dark text-ink font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {inquirySubmitting ? "Sending..." : "Send Request"}
+              </button>
+            </form>
+          )}
+</div>
+    </div>
+    )}
+    </>
   );
 }

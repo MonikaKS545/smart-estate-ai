@@ -12,12 +12,11 @@ import {
 import client from "../api/client";
 
 const PROPERTY_TYPES = [
-  "Apartment",
-  "Villa",
-  "Independent House",
-  "Plot/Land",
-  "Commercial Property",
-  "Agricultural Land",
+  { value: "apartment", label: "Apartment" },
+  { value: "villa", label: "Villa" },
+  { value: "Independent House", label: "Independent House" },
+  { value: "plot", label: "Plot/Land" },
+  // TODO: re-add once backend PropertyTypeEnum supports commercial and agricultural
 ];
 
 const FURNISHING_OPTIONS = ["Unfurnished", "Semi-Furnished", "Fully Furnished"];
@@ -179,10 +178,18 @@ export default function AddProperty() {
       navigate("/agent");
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.detail ||
-          "Something went wrong while creating the property. Please try again."
-      );
+      const detail = err.response?.data?.detail;
+      let errorMessage;
+      if (typeof detail === "string") {
+        errorMessage = detail;
+      } else if (Array.isArray(detail)) {
+        errorMessage = detail
+          .map((item) => `${(item.loc || []).slice(1).join(".")}: ${item.msg}`)
+          .join("; ");
+      } else {
+        errorMessage = "Something went wrong while creating the property. Please try again.";
+      }
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -263,8 +270,8 @@ export default function AddProperty() {
                 >
                   <option value="">Select type</option>
                   {PROPERTY_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
+                    <option key={t.value} value={t.value}>
+                      {t.label}
                     </option>
                   ))}
                 </select>

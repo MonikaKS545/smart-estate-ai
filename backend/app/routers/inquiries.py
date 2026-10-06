@@ -8,7 +8,7 @@ from app.core.deps import get_current_user
 from app.models.user import User
 from app.models.property import Property
 from app.models.inquiry import PropertyInquiry, InquiryStatusEnum
-from app.schemas.inquiry import InquiryCreate, InquiryResponse
+from app.schemas.inquiry import InquiryCreate, InquiryResponse, AgentInquiryResponse
 
 router = APIRouter(prefix="/inquiries", tags=["Inquiries & Tours"])
 
@@ -35,13 +35,45 @@ def create_inquiry(
     db.refresh(inquiry)
     return inquiry
 
-@router.get("/agent", response_model=List[InquiryResponse])
+@router.get("/agent", response_model=List[AgentInquiryResponse])
 def get_agent_inquiries(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Retrieve all tour inquiries assigned to the logged-in agent."""
-    return db.query(PropertyInquiry).filter(PropertyInquiry.agent_id == current_user.id).all()
+    """Retrieve all tour inquiries assigned to the logged-in agent, with property and buyer details."""
+    results = (
+        db.query(
+            PropertyInquiry,
+            Property.title.label("property_title"),
+            Property.city.label("property_city"),
+            User.name.label("buyer_name"),
+            User.email.label("buyer_email"),
+        )
+        .outerjoin(Property, PropertyInquiry.property_id == Property.id)
+        .outerjoin(User, PropertyInquiry.buyer_id == User.id)
+        .filter(PropertyInquiry.agent_id == current_user.id)
+        .order_by(PropertyInquiry.created_at.desc())
+        .all()
+    )
+
+    return [
+        AgentInquiryResponse(
+            id=inquiry.id,
+            property_id=inquiry.property_id,
+            buyer_id=inquiry.buyer_id,
+            agent_id=inquiry.agent_id,
+            inquiry_type=inquiry.inquiry_type,
+            message=inquiry.message,
+            preferred_date=inquiry.preferred_date,
+            status=inquiry.status,
+            created_at=inquiry.created_at,
+            property_title=property_title,
+            property_city=property_city,
+            buyer_name=buyer_name,
+            buyer_email=buyer_email,
+        )
+        for inquiry, property_title, property_city, buyer_name, buyer_email in results
+    ]
 
 @router.get("/buyer", response_model=List[InquiryResponse])
 def get_buyer_inquiries(
