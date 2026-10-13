@@ -1,6 +1,5 @@
-from pydantic import BaseModel
-from pydantic import field_validator
-from typing import Optional
+from pydantic import BaseModel, field_validator
+from typing import Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime
 from app.models.property import PropertyTypeEnum
@@ -84,9 +83,12 @@ class PropertyResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: Optional[datetime]
+    trust_signals: Optional[Dict[str, Any]] = None
+    trust_score: Optional[int] = None
 
     class Config:
         from_attributes = True
+        extra = "allow"
 
 
 class FavoriteCreate(BaseModel):
