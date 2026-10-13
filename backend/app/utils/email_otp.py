@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import smtplib
 import random
 import os
@@ -6,6 +9,9 @@ from datetime import datetime, timedelta
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_APP_PASSWORD = os.getenv("EMAIL_APP_PASSWORD")
+
+print(f"DEBUG: EMAIL_ADDRESS={'SET' if EMAIL_ADDRESS else 'MISSING'}")
+print(f"DEBUG: EMAIL_APP_PASSWORD={'SET (len=' + str(len(EMAIL_APP_PASSWORD)) + ')' if EMAIL_APP_PASSWORD else 'MISSING'}")
 
 # Simple in-memory OTP store: {email: {"otp": "123456", "expires": datetime}}
 otp_store = {}
@@ -29,6 +35,7 @@ def send_otp_email(to_email: str) -> str:
 
     with smtplib.SMTP("smtp.gmail.com", 587) as server:
         server.starttls()
+        server.ehlo()
         server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
         server.send_message(msg)
 

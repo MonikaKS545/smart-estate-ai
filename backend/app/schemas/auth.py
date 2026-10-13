@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from uuid import UUID
 
 
@@ -6,6 +6,15 @@ class RegisterRequest(BaseModel):
     name: str
     email: EmailStr
     password: str
+    role: str = "buyer"
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str) -> str:
+        allowed = ["buyer", "agent", "admin"]
+        if v not in allowed:
+            raise ValueError(f"Role must be one of: {', '.join(allowed)}")
+        return v
 
 
 class LoginRequest(BaseModel):

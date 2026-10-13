@@ -4,14 +4,15 @@ from datetime import datetime
 from sqlalchemy import (
     Column, String, Integer, Numeric, Boolean, DateTime, Enum, ForeignKey, JSON
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
+from app.models.property import Property
 
 
 class PropertyImage(Base):
     __tablename__ = "property_images"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    property_id = Column(UUID(as_uuid=True), ForeignKey("properties.id"))
+    property_id = Column(UUID(as_uuid=True), ForeignKey("properties.id", ondelete="CASCADE"))
     image_url = Column(String, nullable=False)
     is_primary = Column(Boolean, default=False)
 
@@ -32,7 +33,7 @@ class Favorite(Base):
     __tablename__ = "favorites"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    property_id = Column(UUID(as_uuid=True), ForeignKey("properties.id"))
+    property_id = Column(UUID(as_uuid=True), ForeignKey("properties.id", ondelete="CASCADE"))
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -40,7 +41,7 @@ class SavedSearch(Base):
     __tablename__ = "saved_searches"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    filters_json = Column(JSONB)
+    filters_json = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -59,6 +60,7 @@ class Document(Base):
     uploaded_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     doc_type = Column(String)
     file_url = Column(String)
+    file_path = Column(String)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -72,8 +74,8 @@ class DocumentVerification(Base):
     __tablename__ = "document_verifications"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"))
-    extracted_json = Column(JSONB)
-    match_result_json = Column(JSONB)
+    extracted_json = Column(JSON)
+    match_result_json = Column(JSON)
     status = Column(Enum(VerificationStatusEnum), default=VerificationStatusEnum.pending)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -84,7 +86,7 @@ class FraudAnalysis(Base):
     property_id = Column(UUID(as_uuid=True), ForeignKey("properties.id"))
     trust_score = Column(Integer)
     risk_level = Column(String)
-    reasons_json = Column(JSONB)
+    reasons_json = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -138,3 +140,34 @@ class ChatMessage(Base):
     sender = Column(Enum(SenderEnum))
     message_text = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class LocationCache(Base):
+    __tablename__ = "location_cache"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    property_id = Column(UUID(as_uuid=True), ForeignKey(Property.__table__.c.id, ondelete="CASCADE"), unique=True, index=True)
+    nearby_json = Column(JSON, nullable=False)
+    location_score = Column(Integer, nullable=False)
+    data_source = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AnalysisCache(Base):
+    __tablename__ = "analysis_cache"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    property_id = Column(UUID(as_uuid=True), ForeignKey("properties.id"), unique=True, index=True)
+    analysis_json = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ForecastCache(Base):
+    __tablename__ = "forecast_cache"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    property_id = Column(UUID(as_uuid=True), ForeignKey("properties.id"), unique=True, index=True)
+    city = Column(String, nullable=False)
+    years = Column(Integer, default=5)
+    forecast_json = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

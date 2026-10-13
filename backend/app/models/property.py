@@ -20,6 +20,13 @@ class PropertyStatusEnum(str, enum.Enum):
     sold = "sold"
 
 
+class PropertyTypeEnum(str, enum.Enum):
+    apartment = "apartment"
+    villa = "villa"
+    plot = "plot"
+    independent_house = "Independent House"
+
+
 class Property(Base):
     __tablename__ = "properties"
 
@@ -27,7 +34,7 @@ class Property(Base):
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     title = Column(String, nullable=False)
     description = Column(String)
-    property_type = Column(String)
+    property_type = Column(Enum(PropertyTypeEnum, values_callable=lambda x: [e.value for e in x]))
     listing_type = Column(Enum(ListingTypeEnum))
     price = Column(Numeric)
     area_sqft = Column(Numeric)

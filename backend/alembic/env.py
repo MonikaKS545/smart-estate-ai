@@ -14,6 +14,7 @@ from app.database import Base
 from app.models.user import User
 from app.models.property import Property
 from app.models.common import *
+from app.models.inquiry import PropertyInquiry
 
 config = context.config
 config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
