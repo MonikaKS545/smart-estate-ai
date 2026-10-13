@@ -1,10 +1,12 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.database import get_db
 from app.models.common import ChatSession, ChatMessage, SenderEnum
-from app.rag.chatbot import answer_query
+from app.rag.chatbot import answer_query, sync_chromadb_with_db
 from app.schemas.ai_schemas import ChatMessageRequest, ChatMessageResponse
 from app.core.deps import get_current_user
 from app.models.user import User
@@ -39,7 +41,6 @@ def send_chat_message(
     db.commit()
 
     # Run the RAG pipeline
-        # Run the RAG pipeline
     result = answer_query(payload.message, db=db)
 
     # Save the assistant's reply
@@ -56,3 +57,55 @@ def send_chat_message(
         response_text=result["response_text"],
         referenced_property_ids=result["referenced_property_ids"],
     )
+
+
+@router.post("/message/stream")
+def stream_chat_message(
+    payload: ChatMessageRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if payload.session_id:
+        session = db.query(ChatSession).filter(ChatSession.id == payload.session_id).first()
+        if not session:
+            raise HTTPException(status_code=404, detail="Chat session not found")
+    else:
+        session = ChatSession(user_id=current_user.id)
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+
+    user_msg = ChatMessage(
+        session_id=session.id,
+        sender=SenderEnum.user,
+        message_text=payload.message,
+    )
+    db.add(user_msg)
+    db.commit()
+
+    def generate():
+        result = answer_query(payload.message, db=db)
+        full_text = result["response_text"]
+
+        assistant_msg = ChatMessage(
+            session_id=session.id,
+            sender=SenderEnum.assistant,
+            message_text=full_text,
+        )
+        db.add(assistant_msg)
+        db.commit()
+
+        words = full_text.split()
+        for i, word in enumerate(words):
+            chunk = word + (" " if i < len(words) - 1 else "")
+            yield f"data: {json.dumps({'chunk': chunk, 'done': False})}\n\n"
+
+        yield f"data: {json.dumps({'chunk': '', 'done': True, 'referenced_property_ids': result['referenced_property_ids']})}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.post("/admin/resync-chromadb")
+def resync_chromadb(db: Session = Depends(get_db)):
+    count = sync_chromadb_with_db(db)
+    return {"message": f"Successfully synced {count} properties to ChromaDB"}
