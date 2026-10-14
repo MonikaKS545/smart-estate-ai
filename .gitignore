@@ -16,3 +16,6 @@ backend/venv_old/
 chroma_db/
 .venv/
 *.pdf
+*-kavyaab17*
+.env
+venv/
