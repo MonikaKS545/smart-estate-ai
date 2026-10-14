@@ -22,5 +22,5 @@ def get_property_location_intel(
     if not prop.latitude or not prop.longitude:
         raise HTTPException(status_code=400, detail="Property does not have coordinates set")
 
-    result = get_location_intel(float(prop.latitude), float(prop.longitude), city=prop.city)
+    result = get_location_intel(db, float(prop.latitude), float(prop.longitude), str(property_id), city=prop.city)
     return LocationIntelResponse(**result)

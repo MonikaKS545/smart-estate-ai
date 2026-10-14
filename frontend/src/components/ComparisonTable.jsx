@@ -1,5 +1,4 @@
 import { Crown } from "lucide-react";
-import mockAnalysis from "../mocks/mockAnalysis";
 
 /**
  * Side-by-side comparison table for 2+ properties.
@@ -10,9 +9,10 @@ import mockAnalysis from "../mocks/mockAnalysis";
  *
  * Props:
  *  - properties: array of property objects (2 or more)
+ *  - analysisData: object mapping property ID to analysis data (from /properties/{id}/analyze)
  */
-export default function ComparisonTable({ properties }) {
-  const scores = properties.map((p) => mockAnalysis[p.id]?.overall_score ?? null);
+export default function ComparisonTable({ properties, analysisData = {} }) {
+  const scores = properties.map((p) => analysisData[p.id]?.overall_score ?? null);
   const bestScore = Math.max(...scores.filter((s) => s !== null), -Infinity);
   const bestIndex =
     bestScore === -Infinity ? -1 : scores.indexOf(bestScore);
@@ -36,7 +36,7 @@ export default function ComparisonTable({ properties }) {
     { label: "Status", get: (p) => p.status },
     {
       label: "Overall Score",
-      get: (p) => mockAnalysis[p.id]?.overall_score ?? "Not analyzed",
+      get: (p) => analysisData[p.id]?.overall_score ?? "Not analyzed",
     },
   ];
 

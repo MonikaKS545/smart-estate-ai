@@ -31,6 +31,7 @@ class NearbyPlace(BaseModel):
 
 class NearbyFacilities(BaseModel):
     schools: List[NearbyPlace]
+    colleges: List[NearbyPlace]
     hospitals: List[NearbyPlace]
     metro: List[NearbyPlace]
     bus_stops: List[NearbyPlace]
@@ -43,6 +44,7 @@ class LocationIntelResponse(BaseModel):
     nearby: NearbyFacilities
     location_score: int
     data_source: str = "live"
+    from_cache: bool = False
 
 
 class AnalyzePropertyResponse(BaseModel):

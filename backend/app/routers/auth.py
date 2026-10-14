@@ -24,10 +24,14 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    from app.models.user import RoleEnum
+    role_enum = RoleEnum(payload.role)
+
     new_user = User(
         name=payload.name,
         email=payload.email,
         password_hash=hash_password(payload.password),
+        role=role_enum,
     )
     db.add(new_user)
     db.commit()

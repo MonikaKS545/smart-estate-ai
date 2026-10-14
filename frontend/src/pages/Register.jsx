@@ -6,6 +6,7 @@ function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('buyer');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -15,10 +16,13 @@ function Register() {
     setError('');
     setLoading(true);
     try {
-      const response = await client.post('/auth/register', { name, email, password });
+      const response = await client.post('/auth/register', { name, email, password, role });
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('role', response.data.user.role);
-      navigate('/buyer');
+      // Redirect based on role
+      if (response.data.user.role === 'admin') navigate('/admin');
+      else if (response.data.user.role === 'agent') navigate('/agent');
+      else navigate('/buyer');
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed');
     } finally {
@@ -99,6 +103,25 @@ function Register() {
               placeholder="••••••••"
               className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
+          </div>
+
+          <div>
+            <label
+              htmlFor="register-role"
+              className="block mb-1 text-sm font-medium text-gray-700"
+            >
+              Register As
+            </label>
+            <select
+              id="register-role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            >
+              <option value="buyer">Buyer — Search & save properties</option>
+              <option value="agent">Agent — List & manage properties</option>
+              <option value="admin">Admin — Platform administration</option>
+            </select>
           </div>
 
           <button

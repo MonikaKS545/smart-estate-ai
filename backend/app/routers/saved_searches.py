@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from uuid import UUID
 
 from app.database import get_db
 from app.models.user import User
@@ -39,3 +40,21 @@ def list_saved_searches(
             for s in searches
         ]
     }
+
+
+@router.delete("/{search_id}")
+def delete_saved_search(
+    search_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    search = db.query(SavedSearch).filter(
+        SavedSearch.id == search_id,
+        SavedSearch.user_id == current_user.id,
+    ).first()
+    if not search:
+        raise HTTPException(status_code=404, detail="Saved search not found")
+
+    db.delete(search)
+    db.commit()
+    return {"message": "Saved search deleted"}

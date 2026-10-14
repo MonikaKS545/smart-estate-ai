@@ -1,5 +1,18 @@
-import { MapPin, BedDouble, Bath, Square } from "lucide-react";
+import { MapPin, BedDouble, Bath, Square, Navigation } from "lucide-react";
 import TrustScoreBadge from "./TrustScoreBadge";
+
+const haversineDistance = (lat1, lon1, lat2, lon2) => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 
 /**
  * Reusable property card with integrated Trust Score Badge & Popover.
@@ -7,8 +20,9 @@ import TrustScoreBadge from "./TrustScoreBadge";
  *  - property: the property object (with optional trust_signals / trust_score)
  *  - onClick: optional handler, e.g. navigate to detail page
  *  - matchScore: optional number (0-100) to show a "Match" badge
+ *  - userLocation: optional {lat, lng} to show distance
  */
-export default function PropertyCard({ property, onClick, matchScore }) {
+export default function PropertyCard({ property, onClick, matchScore, userLocation }) {
   const {
     id,
     title,
@@ -21,6 +35,8 @@ export default function PropertyCard({ property, onClick, matchScore }) {
     status,
     trust_signals,
     trust_score,
+    latitude,
+    longitude,
   } = property;
 
   const formattedPrice = new Intl.NumberFormat("en-IN", {
@@ -28,6 +44,10 @@ export default function PropertyCard({ property, onClick, matchScore }) {
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(price);
+
+  const distance = userLocation && latitude && longitude
+    ? haversineDistance(userLocation.lat, userLocation.lng, latitude, longitude)
+    : null;
 
   const statusStyles = {
     available: "bg-green-100 text-green-800",
@@ -67,6 +87,13 @@ export default function PropertyCard({ property, onClick, matchScore }) {
             {matchScore}% Match
           </span>
         )}
+
+        {distance !== null && (
+          <span className="absolute bottom-2 right-2 text-xs font-semibold px-2 py-1 rounded-full bg-emerald-600 text-white shadow-xs flex items-center gap-1">
+            <Navigation size={10} />
+            {distance.toFixed(1)} km
+          </span>
+        )}
       </div>
 
       <div className="p-4 space-y-2">
@@ -87,6 +114,13 @@ export default function PropertyCard({ property, onClick, matchScore }) {
           <MapPin size={14} className="shrink-0" />
           <span className="line-clamp-1">{address}</span>
         </p>
+
+        {distance !== null && (
+          <p className="flex items-center gap-1 text-sm text-emerald-600 font-medium">
+            <Navigation size={14} />
+            {distance.toFixed(1)} km away
+          </p>
+        )}
 
         <div className="flex items-center gap-4 text-sm text-sage border-t border-line mt-1 pt-2">
           <span className="flex items-center gap-1">

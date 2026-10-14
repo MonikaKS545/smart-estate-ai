@@ -17,42 +17,49 @@ function extractLocality(address) {
   return parts.length >= 2 ? parts[parts.length - 2] : parts[0];
 }
 
-export default function FilterPanel({ properties, onFilterChange }) {
+export default function FilterPanel({ properties, onFilterChange, filters, onFiltersChange }) {
   const localities = [
     ...new Set(properties.map((p) => extractLocality(p.address))),
   ].sort();
 
-  const [locality, setLocality] = useState("all");
-  const [bhk, setBhk] = useState("all");
-  const [status, setStatus] = useState("all");
-  const [maxPrice, setMaxPrice] = useState(50000000); // 5 crore default
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [sortBy, setSortBy] = useState("trust_desc"); // Default to Sort by Trust Score
+  // Use controlled props from parent, with local defaults for initial render
+  const {
+    locality = "all",
+    bhk = "all",
+    status = "all",
+    maxPrice = 50000000,
+    verifiedOnly = false,
+    sortBy = "trust_desc",
+  } = filters || {};
 
+  // Handler wrappers that call parent's onFiltersChange
+  const handleLocalityChange = (value) => onFiltersChange?.({ ...filters, locality: value });
+  const handleBhkChange = (value) => onFiltersChange?.({ ...filters, bhk: value });
+  const handleStatusChange = (value) => onFiltersChange?.({ ...filters, status: value });
+  const handleMaxPriceChange = (value) => onFiltersChange?.({ ...filters, maxPrice: value });
+  const handleVerifiedOnlyChange = (value) => onFiltersChange?.({ ...filters, verifiedOnly: value });
+  const handleSortByChange = (value) => onFiltersChange?.({ ...filters, sortBy: value });
+
+  // Apply filtering and sorting locally (same logic as before)
   useEffect(() => {
     let filtered = [...properties];
 
-    // Locality Filter
     if (locality !== "all") {
       filtered = filtered.filter(
         (p) => extractLocality(p.address) === locality
       );
     }
 
-    // BHK Filter
     if (bhk !== "all") {
       filtered = filtered.filter((p) => p.bhk === Number(bhk));
     }
 
-    // Status Filter
     if (status !== "all") {
       filtered = filtered.filter((p) => p.status === status);
     }
 
-    // Max Price Filter
     filtered = filtered.filter((p) => p.price <= maxPrice);
 
-    // Verified Listings Only Filter (Requirement 5: score >= 75 / High Tier)
     if (verifiedOnly) {
       filtered = filtered.filter((p) => {
         const score = typeof p.trust_score === "number"
@@ -62,7 +69,6 @@ export default function FilterPanel({ properties, onFilterChange }) {
       });
     }
 
-    // Sorting (Requirement 5: Sort by Trust Score)
     if (sortBy === "trust_desc") {
       filtered.sort((a, b) => {
         const scoreA = typeof a.trust_score === "number"
@@ -80,7 +86,6 @@ export default function FilterPanel({ properties, onFilterChange }) {
     }
 
     onFilterChange(filtered);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locality, bhk, status, maxPrice, verifiedOnly, sortBy, properties]);
 
   return (
@@ -99,7 +104,7 @@ export default function FilterPanel({ properties, onFilterChange }) {
           id="filter-sort"
           name="sortBy"
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
+          onChange={(e) => handleSortByChange(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-hidden cursor-pointer"
         >
           <option value="trust_desc">Trust Score: High to Low</option>
@@ -119,7 +124,7 @@ export default function FilterPanel({ properties, onFilterChange }) {
             id="filter-verified-only"
             type="checkbox"
             checked={verifiedOnly}
-            onChange={(e) => setVerifiedOnly(e.target.checked)}
+            onChange={(e) => handleVerifiedOnlyChange(e.target.checked)}
             className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
           />
           <div className="text-xs">
@@ -143,7 +148,7 @@ export default function FilterPanel({ properties, onFilterChange }) {
           id="filter-locality"
           name="locality"
           value={locality}
-          onChange={(e) => setLocality(e.target.value)}
+          onChange={(e) => handleLocalityChange(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-hidden cursor-pointer"
         >
           <option value="all">All localities</option>
@@ -164,7 +169,7 @@ export default function FilterPanel({ properties, onFilterChange }) {
           id="filter-bhk"
           name="bhk"
           value={bhk}
-          onChange={(e) => setBhk(e.target.value)}
+          onChange={(e) => handleBhkChange(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-hidden cursor-pointer"
         >
           <option value="all">Any BHK</option>
@@ -184,7 +189,7 @@ export default function FilterPanel({ properties, onFilterChange }) {
           id="filter-status"
           name="status"
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => handleStatusChange(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-hidden cursor-pointer"
         >
           <option value="all">All</option>
@@ -208,7 +213,7 @@ export default function FilterPanel({ properties, onFilterChange }) {
           max="50000000"
           step="500000"
           value={maxPrice}
-          onChange={(e) => setMaxPrice(Number(e.target.value))}
+          onChange={(e) => handleMaxPriceChange(Number(e.target.value))}
           className="w-full accent-blue-600 cursor-pointer"
         />
       </div>

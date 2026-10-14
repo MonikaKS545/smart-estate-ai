@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Heart } from "lucide-react";
+import { Check, Heart, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import PropertyCard from "../components/PropertyCard";
 import FilterPanel from "../components/FilterPanel";
 import NaturalLanguageSearchBar from "../components/NaturalLanguageSearchBar";
 import client from "../api/client";
-import mockProperties from "../mocks/mockProperties";
 
 export default function PropertySearch() {
   const navigate = useNavigate();
 
   const [allProperties, setAllProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   const [filteredResults, setFilteredResults] = useState([]);
   const [displayedResults, setDisplayedResults] = useState([]);
@@ -19,28 +19,31 @@ export default function PropertySearch() {
   const [compareIds, setCompareIds] = useState([]);
   const [favoriteMap, setFavoriteMap] = useState({}); // property_id -> favorite_id
 
-  useEffect(() => {
-    async function loadProperties() {
-      try {
-        const res = await client.get("/properties");
-        if (res.data?.properties?.length) {
-          setAllProperties(res.data.properties);
-          setFilteredResults(res.data.properties);
-          setDisplayedResults(res.data.properties);
-        } else {
-          setAllProperties(mockProperties);
-          setFilteredResults(mockProperties);
-          setDisplayedResults(mockProperties);
-        }
-      } catch {
-        // Graceful fallback to verified mock properties if backend isn't online
-        setAllProperties(mockProperties);
-        setFilteredResults(mockProperties);
-        setDisplayedResults(mockProperties);
-      } finally {
-        setIsLoading(false);
+  async function loadProperties() {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const res = await client.get("/properties");
+      if (res.data?.properties?.length) {
+        setAllProperties(res.data.properties);
+        setFilteredResults(res.data.properties);
+        setDisplayedResults(res.data.properties);
+      } else {
+        setAllProperties([]);
+        setFilteredResults([]);
+        setDisplayedResults([]);
       }
+    } catch (err) {
+      setLoadError(err.response?.data?.detail || "Couldn't load properties — try again");
+      setAllProperties([]);
+      setFilteredResults([]);
+      setDisplayedResults([]);
+    } finally {
+      setIsLoading(false);
     }
+  }
+
+  useEffect(() => {
     loadProperties();
 
     async function loadFavorites() {
@@ -147,8 +150,23 @@ export default function PropertySearch() {
           )}
 
           {isLoading ? (
-            <div className="text-center text-gray-500 py-12">
+            <div className="flex items-center justify-center text-gray-500 py-12">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" />
               Loading properties...
+            </div>
+          ) : loadError ? (
+            <div className="text-center py-12 bg-white rounded-xl border border-red-200">
+              <div className="flex flex-col items-center gap-3 text-red-700">
+                <AlertCircle size={28} />
+                <p className="text-sm">{loadError}</p>
+                <button
+                  onClick={loadProperties}
+                  className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 cursor-pointer"
+                >
+                  <RefreshCw size={14} />
+                  Retry
+                </button>
+              </div>
             </div>
           ) : displayedResults.length === 0 ? (
             <div className="text-center text-gray-500 py-12 bg-white rounded-xl border border-gray-200">
