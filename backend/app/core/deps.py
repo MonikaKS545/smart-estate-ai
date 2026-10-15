@@ -6,6 +6,7 @@ from typing import Optional
 from app.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User
+from uuid import UUID
 
 bearer_scheme = HTTPBearer()
 
@@ -30,11 +31,21 @@ def get_current_user(
     if user_id is None:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == user_id).first()
+        user_id = payload.get("sub")
+    if user_id is None:
+        raise credentials_exception
+
+    try:
+        user_uuid = UUID(str(user_id))
+    except (ValueError, TypeError):
+        raise credentials_exception
+
+    user = db.query(User).filter(User.id == user_uuid).first()
     if user is None:
         raise credentials_exception
 
     return user
+   
 
 
 def require_role(*allowed_roles: str):
@@ -63,4 +74,8 @@ def get_current_user_optional(
     user_id = payload.get("sub")
     if user_id is None:
         return None
-    return db.query(User).filter(User.id == user_id).first()
+    try:
+        user_uuid = UUID(str(user_id))
+    except (ValueError, TypeError):
+        return None
+    return db.query(User).filter(User.id == user_uuid).first()
