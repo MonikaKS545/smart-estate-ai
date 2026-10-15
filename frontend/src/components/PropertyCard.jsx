@@ -125,11 +125,11 @@ export default function PropertyCard({ property, onClick, matchScore, userLocati
         <div className="flex items-center gap-4 text-sm text-sage border-t border-line mt-1 pt-2">
           <span className="flex items-center gap-1">
             <BedDouble size={14} />
-            {bhk} BHK
+            {bhk} BHK ·
           </span>
           <span className="flex items-center gap-1">
             <Bath size={14} />
-            {bathrooms}
+            {bathrooms} bath ·
           </span>
           <span className="flex items-center gap-1">
             <Square size={14} />
