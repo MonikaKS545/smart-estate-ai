@@ -38,7 +38,9 @@ RULES FOR EVERY REPLY:
 
 6. Format prices in lakhs or crores (for example ₹64.9 L, ₹1.2 Cr). Keep replies short, friendly and easy to scan. End with one helpful follow-up suggestion.
 
-7. Be honest. If you are unsure about a fact, say what is generally true and suggest checking with an official source, rather than guessing. Never fabricate legal, financial or listing details."""
+7. Be honest. If you are unsure about a fact, say what is generally true and suggest checking with an official source, rather than guessing. Never fabricate legal, financial or listing details.
+
+8. Never compare a rent price to a purchase budget. Rent prices are per month; sale prices are total."""
 
 MODELS_TO_TRY = [
     "llama-3.3-70b-versatile",
@@ -111,20 +113,63 @@ def answer_count_query(db) -> dict:
     }
 
 
-def get_relevant_properties(query: str, top_k: int = 5):
-    results = search_properties(query, top_k=top_k)
+def _infer_listing_type(metadata, text):
+    listing_type = (metadata or {}).get("listing_type")
+    if listing_type in ("sale", "rent"):
+        return listing_type
+
+    lowered = (text or "").lower()
+    if "for rent" in lowered or "rental" in lowered or "lease" in lowered:
+        return "rent"
+    if "for sale" in lowered:
+        return "sale"
+    return None
+
+
+def _wants_rent(query):
+    q = (query or "").lower()
+    return any(word in q for word in ("rent", "rental", "lease"))
+
+
+def get_relevant_properties(query: str, top_k: int = 5, db=None):
+    # Fetch more candidates than we need so sale/rent filtering below
+    # still leaves enough relevant listings to answer the question.
+    results = search_properties(query, top_k=max(top_k * 4, top_k))
 
     properties = []
     ids = results["ids"][0]
     metadatas = results["metadatas"][0]
     documents = results["documents"][0]
 
+    desired_type = "rent" if _wants_rent(query) else "sale"
+
     for i in range(len(ids)):
-        properties.append({
+        property_data = {
             "property_id": ids[i],
             "metadata": metadatas[i],
             "text": documents[i],
-        })
+        }
+        listing_type = _infer_listing_type(metadatas[i], documents[i])
+        property_data["listing_type"] = listing_type
+        if listing_type is not None and listing_type != desired_type:
+            continue
+        properties.append(property_data)
+        if len(properties) >= top_k:
+            break
+
+    # If metadata filtering removes everything (for example on an older
+    # ChromaDB collection that has no listing_type), fall back to the
+    # unfiltered candidates instead of answering with no listings.
+    if not properties:
+        for i in range(len(ids)):
+            properties.append({
+                "property_id": ids[i],
+                "metadata": metadatas[i],
+                "text": documents[i],
+                "listing_type": _infer_listing_type(metadatas[i], documents[i]),
+            })
+            if len(properties) >= top_k:
+                break
 
     return properties
 
@@ -132,7 +177,11 @@ def get_relevant_properties(query: str, top_k: int = 5):
 def format_properties_for_prompt(properties):
     lines = []
     for p in properties:
-        lines.append(f"- Property ID {p['property_id']}: {p['text']}")
+        listing_type = p.get("listing_type")
+        if listing_type is None:
+            listing_type = (p.get("metadata") or {}).get("listing_type")
+        listing_label = "For rent" if listing_type == "rent" else "For sale"
+        lines.append(f"- Property ID {p['property_id']}: {listing_label}: {p['text']}")
     return "\n".join(lines)
 
 
@@ -149,7 +198,7 @@ def answer_query(query: str, top_k: int = 5, db=None):
             "referenced_property_ids": [],
         }
 
-    matches = get_relevant_properties(query, top_k=top_k)
+    matches = get_relevant_properties(query, top_k=top_k, db=db)
 
     if not matches:
         context = "(No matching property listings found in the database for this specific search query. Provide helpful guidance and suggest popular localities, typical prices, or alternative options according to your rules.)"
@@ -202,7 +251,22 @@ def sync_chromadb_with_db(db):
             if hasattr(p.property_type, "value")
             else str(p.property_type)
         )
-        text = f"{p.title}. {p.description or ''}. {prop_type}. {p.bhk} BHK. {p.area_sqft} sqft. {p.address}. {p.city}. ₹{p.price:,.0f}."
+        listing_type = (
+            p.listing_type.value
+            if hasattr(p.listing_type, "value")
+            else str(p.listing_type or "sale").strip().lower()
+        )
+        listing_type = listing_type if listing_type in ("sale", "rent") else "sale"
+        listing_label = "For rent" if listing_type == "rent" else "For sale"
+        price_text = (
+            f"Rs {p.price:,.0f}/month"
+            if listing_type == "rent" and p.price is not None
+            else f"Rs {p.price:,.0f}" if p.price is not None else "Price on request"
+        )
+        text = (
+            f"{p.title}. {p.description or ''}. {prop_type}. {listing_label}. "
+            f"{p.bhk} BHK. {p.area_sqft} sqft. {p.address}. {p.city}. {price_text}."
+        )
         metadata = {
             "title": p.title,
             "price": float(p.price) if p.price else 0.0,
@@ -210,6 +274,7 @@ def sync_chromadb_with_db(db):
             "area_sqft": float(p.area_sqft) if p.area_sqft else 0.0,
             "city": p.city or "Bengaluru",
             "property_type": prop_type,
+            "listing_type": listing_type,
         }
         upsert_property(str(p.id), text, metadata)
     return len(properties)
