@@ -1,6 +1,6 @@
 """
 Database integration tests for trust_suite router and repository.
-These tests are SKIPPED unless DATABASE_URL contains "ep-summer-flower-b32e3m2p" (throwaway test branch).
+These tests are SKIPPED unless TEST_DATABASE_URL is set and DATABASE_URL equals it (never production).
 They refuse to run against anything else.
 """
 import os
@@ -8,13 +8,19 @@ import pytest
 from uuid import UUID, uuid4
 from datetime import datetime
 
-# Check if we should run DB tests
+# Check if we should run DB tests. Both variables must be set and identical,
+# so the tests only run against a database chosen on purpose.
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-RUN_DB_TESTS = "ep-summer-flower-b32e3m2p" in DATABASE_URL
-
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
+PRODUCTION_HOST_PREFIX = "ep-orange-fog-b3ml7ls6"
+RUN_DB_TESTS = (
+    bool(TEST_DATABASE_URL)
+    and DATABASE_URL == TEST_DATABASE_URL
+    and PRODUCTION_HOST_PREFIX not in TEST_DATABASE_URL
+)
 skip_if_not_test_db = pytest.mark.skipif(
     not RUN_DB_TESTS,
-    reason="DB tests are skipped unless DATABASE_URL points at a dedicated throwaway test database."
+    reason="DB tests need TEST_DATABASE_URL set, DATABASE_URL equal to it, and the database must not be production."
 )
 
 
