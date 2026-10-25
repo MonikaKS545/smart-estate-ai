@@ -4,9 +4,12 @@ import { useParams, Link } from "react-router-dom";
 import TrustScoreBadge from "../components/TrustScoreBadge";
 import client from "../api/client";
 
+const EPID_PORTAL_URL = "https://gbaeaasthi.karnataka.gov.in/citizen/citizenIntroduction";
+
 export default function PropertyDetail() {
   const { id } = useParams();
   const [activeImage, setActiveImage] = useState(0);
+  const [epidCopied, setEpidCopied] = useState(null);
 
   const [property, setProperty] = useState(null);
   const [images, setImages] = useState([]);
@@ -295,6 +298,15 @@ export default function PropertyDetail() {
               <MapPin size={16} className="shrink-0" />
               {property.address}
             </p>
+            {property.epid && (
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-700">
+                <span>ePID: {property.epid}</span>
+                <button onClick={() => navigator.clipboard.writeText(property.epid)} className="px-2 py-1 border rounded text-xs">Copy ePID</button>
+                <a href={EPID_PORTAL_URL} target="_blank" rel="noopener noreferrer" onClick={() => { navigator.clipboard.writeText(property.epid).then(() => setEpidCopied(true)).catch(() => setEpidCopied(false)); }} className="px-2 py-1 bg-indigo-600 text-white rounded text-xs">Verify on official portal</a>
+              {epidCopied === true && <p className="basis-full text-xs text-gray-500">ePID copied. On the portal, open Search Property and paste it.</p>}
+              {epidCopied === false && <p className="basis-full text-xs text-gray-500">Could not copy automatically. Copy the ePID above, then on the portal open Search Property and paste it.</p>}
+              </div>
+            )}
           </div>
 
           <p className="text-3xl font-bold text-gray-900">

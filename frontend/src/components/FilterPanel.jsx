@@ -27,7 +27,7 @@ export default function FilterPanel({ properties, onFilterChange, filters, onFil
     locality = "all",
     bhk = "all",
     status = "all",
-    maxPrice = 50000000,
+    maxPrice = 500000000,
     verifiedOnly = false,
     sortBy = "trust_desc",
   } = filters || {};
@@ -210,7 +210,7 @@ export default function FilterPanel({ properties, onFilterChange, filters, onFil
           name="maxPrice"
           type="range"
           min="1000000"
-          max="50000000"
+          max="500000000"
           step="500000"
           value={maxPrice}
           onChange={(e) => handleMaxPriceChange(Number(e.target.value))}

@@ -39,6 +39,7 @@ const emptyForm = {
   longitude: "",
   address: "",
   city: "",
+  epid: "",
 };
 
 const inputClass =
@@ -158,6 +159,7 @@ export default function EditProperty() {
     ["description", "property_type", "furnishing", "address", "city"].forEach((field) => {
       if (payload[field] === "") delete payload[field];
     });
+    payload.epid = payload.epid || null;
     return payload;
   };
 
@@ -442,6 +444,10 @@ export default function EditProperty() {
                 onChange={handleChange}
                 className={inputClass}
               />
+            </div>
+            <div>
+              <label className={labelClass}>ePID (10-digit property ID)</label>
+              <input type="text" inputMode="numeric" maxLength={10} pattern="\d{10}" name="epid" value={form.epid} onChange={handleChange} placeholder="e.g. 5196874965" className={inputClass} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

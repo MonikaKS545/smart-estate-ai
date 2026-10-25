@@ -49,6 +49,7 @@ class Property(Base):
     longitude = Column(Numeric)
     address = Column(String)
     city = Column(String)
+    epid = Column(String(10), nullable=True, index=True)
     status = Column(Enum(PropertyStatusEnum), default=PropertyStatusEnum.pending)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

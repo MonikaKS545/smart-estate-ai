@@ -24,6 +24,7 @@ class PropertyCreate(BaseModel):
     longitude: Optional[float] = None
     address: Optional[str] = None
     city: Optional[str] = None
+    epid: Optional[str] = None
 
     @field_validator("city", mode="before")
     @classmethod
@@ -31,6 +32,18 @@ class PropertyCreate(BaseModel):
         if v is None:
             return v
         return v.strip().title()
+
+    @field_validator("epid", mode="before")
+    @classmethod
+    def check_epid(cls, v):
+        if v is None:
+            return None
+        v = str(v).strip()
+        if v == "":
+            return None
+        if not (v.isdigit() and len(v) == 10):
+            raise ValueError("ePID must be exactly 10 digits")
+        return v
 
 
 class PropertyUpdate(BaseModel):
@@ -51,6 +64,7 @@ class PropertyUpdate(BaseModel):
     longitude: Optional[float] = None
     address: Optional[str] = None
     city: Optional[str] = None
+    epid: Optional[str] = None
     status: Optional[str] = None
 
     @field_validator("city", mode="before")
@@ -59,6 +73,18 @@ class PropertyUpdate(BaseModel):
         if v is None:
             return v
         return v.strip().title()
+
+    @field_validator("epid", mode="before")
+    @classmethod
+    def check_epid(cls, v):
+        if v is None:
+            return None
+        v = str(v).strip()
+        if v == "":
+            return None
+        if not (v.isdigit() and len(v) == 10):
+            raise ValueError("ePID must be exactly 10 digits")
+        return v
 
 
 class PropertyResponse(BaseModel):
@@ -81,6 +107,7 @@ class PropertyResponse(BaseModel):
     longitude: Optional[float]
     address: Optional[str]
     city: Optional[str]
+    epid: Optional[str] = None
     status: str
     created_at: datetime
     updated_at: Optional[datetime]
