@@ -337,10 +337,12 @@ export default function AddProperty() {
                     className={`px-3 py-1 rounded-full text-xs font-semibold ${
                       verifyResult.overall_status === "verified"
                         ? "bg-emerald-100 text-emerald-700"
+                        : verifyResult.overall_status === "partial"
+                        ? "bg-amber-100 text-amber-700"
                         : "bg-red-100 text-red-700"
                     }`}
                   >
-                    {verifyResult.overall_status}
+                    {verifyResult.overall_status === "partial" ? "partly verified" : verifyResult.overall_status}
                   </span>
                 </div>
                 <ul className="space-y-1">
@@ -360,6 +362,14 @@ export default function AddProperty() {
                       </li>
                     ))}
                 </ul>
+                {verifyResult.overall_status === "partial" && (
+                  <p className="text-xs text-amber-700">
+                    Some checks could not be done: {verifyResult.match_results
+                      .filter((r) => r.status === "not_found")
+                      .map((r) => r.field.replace(/_/g, " "))
+                      .join(", ")}. Please check these manually.
+                  </p>
+                )}
                 <p className="text-xs text-gray-500">{verifyResult.disclaimer}</p>
               </div>
             )}
