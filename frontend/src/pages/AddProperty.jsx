@@ -231,6 +231,7 @@ export default function AddProperty() {
           property_address: form.address || "",
           property_id: createdProperty.id,
           survey_number: surveyNumber.trim(),
+          epid: createdProperty.epid || "",
           area: form.area_sqft ? `${form.area_sqft} sq ft` : "",
           document_date: "",
           registration_number: "",
@@ -365,7 +366,7 @@ export default function AddProperty() {
                 {verifyResult.overall_status === "partial" && (
                   <p className="text-xs text-amber-700">
                     Some checks could not be done: {verifyResult.match_results
-                      .filter((r) => r.status === "not_found" && ["owner_name", "survey_number"].includes(r.field))
+                      .filter((r) => r.status === "not_found" && ["owner_name", "survey_number", "epid"].includes(r.field))
                       .map((r) => r.field.replace(/_/g, " "))
                       .join(", ")}. Please check these manually.
                   </p>

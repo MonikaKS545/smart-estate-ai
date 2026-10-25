@@ -12,6 +12,7 @@ class ExtractedFieldsSchema(BaseModel):
     owner_name: Optional[str] = None
     property_address: Optional[str] = None
     property_id: Optional[str] = None
+    epid: Optional[str] = None
     survey_number: Optional[str] = None
     area: Optional[str] = None
     document_date: Optional[str] = None
@@ -38,6 +39,7 @@ class PropertyVerifyTarget(BaseModel):
     owner_name: Optional[str] = None
     property_address: Optional[str] = None
     property_id: Optional[str] = None
+    epid: Optional[str] = None
     survey_number: Optional[str] = None
     area: Optional[str] = None
     document_date: Optional[str] = None

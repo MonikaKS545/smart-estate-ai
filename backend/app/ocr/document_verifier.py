@@ -23,6 +23,7 @@ LISTING_FIELDS = (
     "owner_name",
     "property_address",
     "property_id",
+    "epid",
     "survey_number",
     "area",
     "document_date",
@@ -81,6 +82,11 @@ def verify_field(field_name: str, extracted_val: Optional[str], target_val: Opti
         # Nothing to compare against, so we must not claim a match
         return "not_compared"
 
+    # ePID is an exact 10-digit ID: compare digits only, never fuzzy
+    if field_name == "epid":
+        a = "".join(ch for ch in str(extracted_val) if ch.isdigit())
+        b = "".join(ch for ch in str(target_val) if ch.isdigit())
+        return "match" if a == b else "mismatch"
     # Numeric comparison for area
     if field_name == "area":
         num_extracted = parse_numeric(extracted_val)
@@ -155,6 +161,7 @@ def verify_document_fields(
         "owner_name": record.get("owner_name") or record.get("agent_name") or record.get("title"),
         "property_address": record.get("property_address") or record.get("address"),
         "property_id": record.get("property_id") or record.get("id"),
+        "epid": record.get("epid"),
         "survey_number": record.get("survey_number"),
         "area": record.get("area") or record.get("area_sqft"),
         "document_date": record.get("document_date"),
@@ -190,7 +197,7 @@ def verify_document_fields(
 
     # Determine overall status
     key_missing = [r["field"] for r in match_results
-                   if r["field"] in ("owner_name", "survey_number")
+                   if r["field"] in ("owner_name", "survey_number", "epid")
                    and r["status"] == "not_found"]
     if has_mismatch:
         overall_status = "mismatch"
