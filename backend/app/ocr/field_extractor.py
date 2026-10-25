@@ -4,160 +4,185 @@ from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-# Try importing spacy for advanced NLP extraction if installed
-SPACY_AVAILABLE = False
-nlp_model = None
+# ---------------------------------------------------------------------------
+# Document type detection (from the title line at the top of the document)
+# ---------------------------------------------------------------------------
+DOC_TITLES = [
+    ("sale_deed", ["sale deed"]),
+    ("khata", ["khata certificate", "khata extract"]),
+    ("encumbrance_certificate", ["encumbrance certificate"]),
+    ("property_tax_receipt", ["property tax receipt", "tax receipt"]),
+    ("seller_id", ["seller identity proof", "identity proof"]),
+]
 
-try:
-    import spacy
-    try:
-        nlp_model = spacy.load("en_core_web_sm")
-        SPACY_AVAILABLE = True
-    except Exception:
-        logger.info("spaCy en_core_web_sm model not loaded. Using enhanced regex and NLP heuristics.")
-except ImportError:
-    logger.info("spaCy library not installed. Using regex heuristics for field extraction.")
+PROPERTY_TYPE_PREFIX = re.compile(
+    r"^(independent house|apartment|villa|plot|flat|house)\s*,\s*", re.IGNORECASE
+)
+MORTGAGE_WORDS = ("mortgage", "lien", "loan", "hypothecat", "charge created")
+
+LABEL_RE = re.compile(r"^\s*([A-Za-z][A-Za-z0-9 /\-\.\(\)]{1,60}?)\s*:\s*(\S.*)$")
 
 
-def extract_survey_number(text: str) -> Optional[str]:
-    """Extracts survey number (e.g., Sy No 124/2A, Survey No. 45/1, Sy. 89)."""
-    patterns = [
-        r'(?:Survey\s*(?:Number|Num|No|\.)?|Sy\s*\.?\s*No\.?|Plot\s*No\.?)\s*[:\-]?\s*(?:Sy\s*\.?\s*No\.?\s*)?([0-9]+[A-Za-z0-9\/\-]*)',
-        r'\b(?:Sy|Sy\.?|Survey)\s*#?\s*([0-9]+[A-Za-z0-9\/\-]*)',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            val = match.group(1).strip()
-            if val and not val.lower().startswith('ber'):
-                return val
+def detect_doc_type(text: str) -> Optional[str]:
+    """Guess the document type from the first few lines (the title)."""
+    lines = [ln.strip().lower() for ln in text.splitlines() if ln.strip()][:8]
+    for line in lines:
+        for doc_type, titles in DOC_TITLES:
+            if any(t in line for t in titles):
+                return doc_type
     return None
 
 
-def extract_registration_number(text: str) -> Optional[str]:
-    """Extracts registration / deed / document number."""
-    patterns = [
-        r'(?:Registration\s*(?:Number|Num|No|\.)?|Doc\.?\s*Reg\.?\s*No\.?|Deed\s*No\.?|Doc\s*No\.?|Reg\s*#)\s*[:\-]?\s*([A-Za-z0-9\/\-]+)',
-        r'\b(REG\/[0-9]{4}\/[0-9]+)\b',
-        r'\b(DOC-[0-9]{4,8})\b',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            val = match.group(1).strip()
-            if val and not val.lower().startswith('ber'):
-                return val
+def parse_labeled_lines(text: str) -> Dict[str, str]:
+    """Turns 'Label: Value' lines into a dict. Keeps the first occurrence of each label."""
+    found: Dict[str, str] = {}
+    for line in text.splitlines():
+        m = LABEL_RE.match(line)
+        if not m:
+            continue
+        key = re.sub(r"\s*\(.*?\)", "", m.group(1)).strip().lower()  # drop "(Fictional)" etc.
+        key = re.sub(r"\s+", " ", key)
+        found.setdefault(key, m.group(2).strip())
+    return found
+
+
+def _get(labels: Dict[str, str], *names: str) -> Optional[str]:
+    for n in names:
+        val = labels.get(n)
+        if val and val.strip():
+            return val.strip()
     return None
 
 
-def extract_property_id(text: str) -> Optional[str]:
-    """Extracts property ID / PID / Khata No."""
-    patterns = [
-        r'(?:Property\s*ID|PID|Property\s*Code|Khata\s*No\.?)\s*[:\-]?\s*([A-Za-z0-9\/\-]+)',
-        r'\b(PROP-[0-9]{3,8})\b',
-        r'\b(PID-[0-9]{3,8})\b',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            return match.group(1).strip()
-    return None
+# ---------------------------------------------------------------------------
+# Fallback patterns, used only when no labelled line is found
+# ---------------------------------------------------------------------------
+def _fallback_survey(text: str) -> Optional[str]:
+    m = re.search(
+        r"(?:Survey|Sy|Site)\s*[/\.]?\s*(?:Site)?\s*(?:Number|No)\.?\s*[:\-]?\s*([0-9]+[A-Za-z0-9\/\-]*)",
+        text, re.IGNORECASE,
+    )
+    return m.group(1).strip() if m else None
 
 
-def extract_area(text: str) -> Optional[str]:
-    """Extracts property area (e.g., 1200 sq ft, 1500 sqft, 250 Sq. Meters)."""
-    patterns = [
-        r'(?:Area|Extent|Built\s*up\s*area|Carpet\s*area|Plot\s*area)\s*[:\-\/]?\s*([0-9\.,]+\s*(?:sq\.?\s*ft\.?|sqft|sq\.?\s*m\.?|sqm|square\s*feet|acres|cents)[^\n,]*)',
-        r'\b([0-9\.,]+\s*(?:sq\.?\s*ft\.?|sqft|square\s*feet))\b',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            return match.group(1).strip()
-    return None
+def _fallback_area(text: str) -> Optional[str]:
+    m = re.search(r"\b([0-9][0-9\.,]*\s*(?:sq\.?\s*ft\.?|sqft|square\s*feet))", text, re.IGNORECASE)
+    return m.group(1).strip() if m else None
 
 
-def extract_document_date(text: str) -> Optional[str]:
-    """Extracts document execution or registration date."""
-    patterns = [
-        r'(?:Date|Executed\s*on|Dated|Registration\s*Date)\s*[:\-]?\s*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})',
-        r'(?:Date|Executed\s*on|Dated)\s*[:\-]?\s*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+[0-9]{4})',
-        r'\b([0-9]{4}[\/\-][0-9]{2}[\/\-][0-9]{2})\b',
-        r'\b([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{4})\b',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            return match.group(1).strip()
-    return None
+def _fallback_owner(text: str) -> Optional[str]:
+    m = re.search(r"(?:Mr\.|Mrs\.|Ms\.|Shri|Smt\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)", text)
+    return m.group(1).strip() if m else None
 
 
-def extract_owner_name(text: str) -> Optional[str]:
-    """Extracts owner / purchaser / vendor / claimant name."""
-    patterns = [
-        r'(?:Purchaser\s*\/\s*Owner\s*Name|Owner\s*Name|Owner|Purchaser|Buyer|Claimant|Proprietor|Name\s*of\s*Owner)\s*[:\-]?\s*([A-Za-z\s\.]+)(?=\n|,|Address|Survey|Date|\d)',
-        r'(?:Mr\.|Mrs\.|Ms\.|Shri|Smt\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            name = match.group(1).strip()
-            name = re.sub(r'\s+(?:Address|Survey|Phone|Date|Property).*$', '', name, flags=re.IGNORECASE).strip()
-            if len(name.split()) >= 1 and len(name) > 2:
-                return name
-
-    if SPACY_AVAILABLE and nlp_model:
-        doc = nlp_model(text)
-        for ent in doc.ents:
-            if ent.label_ == "PERSON" and len(ent.text.split()) <= 4:
-                return ent.text.strip()
-
-    return None
+def _clean_id(value: Optional[str]) -> Optional[str]:
+    """Survey-style identifiers: remove spaces, uppercase."""
+    if not value:
+        return None
+    return re.sub(r"\s+", "", value).upper()
 
 
-def extract_property_address(text: str) -> Optional[str]:
-    """Extracts property address or location details."""
-    patterns = [
-        r'(?:Property\s*Address|Address|Location|Situated\s*at|Premises)\s*[:\-]?\s*([^\n]+(?:\n[^\n]+){0,2})',
-        r'(?:Plot|Flat|House|Door)\s*No\.?\s*[^\n,]+,\s*[^\n]+',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            addr = match.group(1).strip()
-            addr = re.split(r'(?:Survey(?:\s*Number|\s*No\.?)?|Date|Registration(?:\s*Number)?|Area|Owner(?:\s*Name)?)\s*:', addr, flags=re.IGNORECASE)[0].strip()
-            return addr
-    return None
+def _digits_only(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    digits = re.sub(r"[^0-9]", "", value)
+    return digits or None
 
 
-def extract_fields(raw_text: str) -> Dict[str, Optional[str]]:
+def _extract_epid(text: str) -> Optional[str]:
+    """ePID = the 10-digit number printed most often (a Khata repeats it on each page)."""
+    from collections import Counter
+    ids = Counter(re.findall(r"(?<!\d)\d{10}(?!\d)", text))
+    top = ids.most_common(2)
+    if not top or top[0][1] < 2:
+        return None
+    if len(top) > 1 and top[1][1] == top[0][1]:
+        return None
+    return top[0][0]
+def extract_fields(raw_text: str, doc_type: Optional[str] = None) -> Dict[str, Optional[str]]:
     """
-    Parses raw text extracted from a property document and extracts all 7 required fields:
-    1. owner_name
-    2. property_address
-    3. property_id
-    4. survey_number
-    5. area
-    6. document_date
-    7. registration_number
+    Reads 'Label: Value' lines from OCR / PDF text.
+
+    Returns the 7 original fields plus document-specific extras that the
+    verification rules need (khata_type, tax_status, encumbrance_found, ...).
+    doc_type is optional; if missing it is detected from the title line.
     """
-    if not raw_text:
-        return {
-            "owner_name": None,
-            "property_address": None,
-            "property_id": None,
-            "survey_number": None,
-            "area": None,
-            "document_date": None,
-            "registration_number": None,
-        }
+    keys = [
+        "owner_name", "property_address", "property_id", "epid", "survey_number", "area",
+        "document_date", "registration_number",
+        "detected_doc_type", "khata_type", "khata_number", "ec_number", "ec_remarks",
+        "encumbrance_found", "tax_status", "financial_year", "amount_paid",
+        "sale_consideration", "buyer_name", "pan_number", "aadhaar_masked",
+    ]
+    if not raw_text or not raw_text.strip():
+        return {k: None for k in keys}
+
+    detected = detect_doc_type(raw_text)
+    labels = parse_labeled_lines(raw_text)
+    lowered = raw_text.lower()
+
+    # --- the 7 original fields ---
+    owner = _get(labels, "owner name", "seller name", "name", "owner") or _fallback_owner(raw_text)
+
+    address = _get(labels, "property address", "address")
+    if not address:
+        desc = _get(labels, "property description")
+        if desc:
+            address = PROPERTY_TYPE_PREFIX.sub("", desc)
+
+    survey = _clean_id(
+        _get(labels, "survey/site number", "survey number", "survey no", "survey/site no", "site number")
+        or _fallback_survey(raw_text)
+    )
+
+    area = _get(labels, "built-up area", "plot area", "area", "extent") or _fallback_area(raw_text)
+
+    date = _get(labels, "registration date", "issue date", "payment date", "date", "dated")
+
+    # --- extras for document-specific checks ---
+    khata_type = None
+    raw_kt = _get(labels, "khata type")
+    if raw_kt:
+        m = re.match(r"\s*([AB])\b", raw_kt, re.IGNORECASE)
+        khata_type = m.group(1).upper() if m else raw_kt.upper()
+
+    remarks = _get(labels, "remarks")
+    encumbrance_found = None
+    effective_doc = doc_type or detected
+    if effective_doc == "encumbrance_certificate" or "encumbrance" in lowered[:300]:
+        has_mortgage = any(w in lowered for w in MORTGAGE_WORDS)
+        clean_remark = bool(remarks) and "no encumbrance" in remarks.lower()
+        if has_mortgage:
+            encumbrance_found = "true"
+        elif clean_remark:
+            encumbrance_found = "false"
+        elif remarks:
+            encumbrance_found = "true"
+
+    tax_status = _get(labels, "status")
+    pan = re.search(r"\b([A-Z]{5}[0-9]{4}[A-Z])\b", raw_text)
+    aadhaar = re.search(r"\b(X{4}\s?X{4}\s?[0-9]{4})\b", raw_text)
 
     return {
-        "owner_name": extract_owner_name(raw_text),
-        "property_address": extract_property_address(raw_text),
-        "property_id": extract_property_id(raw_text),
-        "survey_number": extract_survey_number(raw_text),
-        "area": extract_area(raw_text),
-        "document_date": extract_document_date(raw_text),
-        "registration_number": extract_registration_number(raw_text),
+        "owner_name": owner,
+        "property_address": address,
+        "property_id": _get(labels, "property id", "linked property id"),
+        "epid": _extract_epid(raw_text),
+        "survey_number": survey,
+        "area": area,
+        "document_date": date,
+        "registration_number": _get(labels, "registration number"),
+        "detected_doc_type": detected,
+        "khata_type": khata_type,
+        "khata_number": _get(labels, "khata number"),
+        "ec_number": _get(labels, "ec number"),
+        "ec_remarks": remarks,
+        "encumbrance_found": encumbrance_found,
+        "tax_status": tax_status.upper() if tax_status else None,
+        "financial_year": _get(labels, "financial year"),
+        "amount_paid": _digits_only(_get(labels, "amount paid")),
+        "sale_consideration": _digits_only(_get(labels, "sale consideration")),
+        "buyer_name": _get(labels, "buyer name"),
+        "pan_number": pan.group(1) if pan else None,
+        "aadhaar_masked": aadhaar.group(1) if aadhaar else None,
     }
