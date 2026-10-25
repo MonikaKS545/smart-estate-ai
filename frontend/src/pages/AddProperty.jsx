@@ -365,7 +365,7 @@ export default function AddProperty() {
                 {verifyResult.overall_status === "partial" && (
                   <p className="text-xs text-amber-700">
                     Some checks could not be done: {verifyResult.match_results
-                      .filter((r) => r.status === "not_found")
+                      .filter((r) => r.status === "not_found" && ["owner_name", "survey_number"].includes(r.field))
                       .map((r) => r.field.replace(/_/g, " "))
                       .join(", ")}. Please check these manually.
                   </p>
