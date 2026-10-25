@@ -6,6 +6,15 @@ import FilterPanel from "../components/FilterPanel";
 import NaturalLanguageSearchBar from "../components/NaturalLanguageSearchBar";
 import client from "../api/client";
 
+const DEFAULT_FILTERS = {
+  locality: "all",
+  bhk: "all",
+  status: "all",
+  maxPrice: 500000000,
+  verifiedOnly: false,
+  sortBy: "trust_desc",
+};
+
 export default function PropertySearch() {
   const navigate = useNavigate();
 
@@ -15,6 +24,9 @@ export default function PropertySearch() {
 
   const [filteredResults, setFilteredResults] = useState([]);
   const [displayedResults, setDisplayedResults] = useState([]);
+
+  // Filter values live here so FilterPanel's controls can actually change
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   const [compareIds, setCompareIds] = useState([]);
   const [favoriteMap, setFavoriteMap] = useState({}); // property_id -> favorite_id
@@ -131,6 +143,8 @@ export default function PropertySearch() {
       <div className="flex flex-col sm:flex-row gap-6">
         <FilterPanel
           properties={allProperties}
+          filters={filters}
+          onFiltersChange={setFilters}
           onFilterChange={handleFilterChange}
         />
 
@@ -212,6 +226,7 @@ export default function PropertySearch() {
                       property={property}
                       onClick={() => navigate(`/property/${property.id}`)}
                     />
+                    {property.epid && (<p className="text-xs text-gray-500 mt-1">ePID: {property.epid}</p>)}
                   </div>
                 );
               })}

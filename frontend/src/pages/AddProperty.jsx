@@ -39,6 +39,7 @@ const initialForm = {
   longitude: "",
   address: "",
   city: "",
+  epid: "",
 };
 
 const inputClass =
@@ -94,7 +95,11 @@ export default function AddProperty() {
   const [images, setImages] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
+  const [createdProperty, setCreatedProperty] = useState(null);
+  const [ownerName, setOwnerName] = useState("");
+  const [surveyNumber, setSurveyNumber] = useState("");
+  const [docType, setDocType] = useState("tax_receipt");
+  const [docFile, setDocFile] = useState(null);
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
@@ -144,7 +149,7 @@ export default function AddProperty() {
       }
     });
 
-    ["description", "property_type", "furnishing", "address", "city"].forEach(
+    ["description", "property_type", "furnishing", "address", "city", "epid"].forEach(
       (field) => {
         if (payload[field] === "") delete payload[field];
       }
@@ -175,7 +180,7 @@ export default function AddProperty() {
         });
       }
 
-      navigate("/agent");
+      setCreatedProperty(newProperty);
     } catch (err) {
       console.error(err);
       const detail = err.response?.data?.detail;
@@ -194,8 +199,183 @@ export default function AddProperty() {
       setSubmitting(false);
     }
   };
+    const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
+  const [verifyResult, setVerifyResult] = useState(null);
 
-  return (
+  const handleVerify = async () => {
+    setVerifyError("");
+    setVerifyResult(null);
+
+    if (!ownerName.trim() || !surveyNumber.trim() || !docFile) {
+      setVerifyError("Please enter owner name, survey number and choose a PDF.");
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append("property_id", createdProperty.id);
+      uploadData.append("doc_type", docType);
+      uploadData.append("file", docFile);
+      const { data: uploaded } = await client.post(
+        "/documents/upload",
+        uploadData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      const { data: result } = await client.post(
+        `/documents/${uploaded.document_id}/verify`,
+        {
+          owner_name: ownerName.trim(),
+          property_address: form.address || "",
+          property_id: createdProperty.id,
+          survey_number: surveyNumber.trim(),
+          area: form.area_sqft ? `${form.area_sqft} sq ft` : "",
+          document_date: "",
+          registration_number: "",
+        }
+      );
+      setVerifyResult(result);
+    } catch (err) {
+      console.error(err);
+      const detail = err.response?.data?.detail;
+      if (typeof detail === "string") {
+        setVerifyError(detail);
+      } else if (Array.isArray(detail)) {
+        setVerifyError(
+          detail
+            .map((item) => `${(item.loc || []).slice(1).join(".")}: ${item.msg}`)
+            .join("; ")
+        );
+      } else {
+        setVerifyError("Could not verify the document. Please try again.");
+      }
+    } finally {
+      setVerifying(false);
+    }
+  };
+    if (createdProperty) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] bg-gray-50">
+        <div className="max-w-3xl mx-auto px-4 py-10">
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Verify your documents
+            </h1>
+            <p className="text-sm text-gray-600">
+              Your property was saved. Document upload comes next.
+            </p>
+                        <div>
+              <label className={labelClass}>Owner name</label>
+              <input
+                type="text"
+                value={ownerName}
+                onChange={(e) => setOwnerName(e.target.value)}
+                placeholder="As written on the documents"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Survey number</label>
+              <input
+                type="text"
+                value={surveyNumber}
+                onChange={(e) => setSurveyNumber(e.target.value)}
+                placeholder="e.g. 231/8"
+                className={inputClass}
+              />
+            </div>
+                        <div>
+              <label className={labelClass}>Document type</label>
+              <select
+                value={docType}
+                onChange={(e) => setDocType(e.target.value)}
+                className={inputClass}
+              >
+                <option value="tax_receipt">Property tax receipt</option>
+                <option value="encumbrance_certificate">
+                  Encumbrance certificate (EC)
+                </option>
+                <option value="khata_certificate">Khata certificate</option>
+              </select>
+            </div>
+                        <div>
+              <label className={labelClass}>Document (PDF)</label>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setDocFile(e.target.files?.[0] || null)}
+                className={inputClass}
+              />
+              {docFile && (
+                <p className="text-xs text-gray-500 mt-1.5">
+                  Selected: {docFile.name}
+                </p>
+              )}
+            </div>
+                        {verifyError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {verifyError}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleVerify}
+              disabled={verifying}
+              className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-6 py-2.5 rounded-lg text-sm transition-all shadow-sm hover:shadow-md"
+            >
+              {verifying ? "Verifying..." : "Upload and verify"}
+            </button>
+                        {verifyResult && (
+              <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    Result:
+                  </span>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      verifyResult.overall_status === "verified"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {verifyResult.overall_status}
+                  </span>
+                </div>
+                <ul className="space-y-1">
+                  {verifyResult.match_results
+                    .filter((r) => r.status === "match" || r.status === "mismatch")
+                    .map((r) => (
+                      <li
+                        key={r.field}
+                        className={`text-sm ${
+                          r.status === "mismatch"
+                            ? "text-red-700 font-medium"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        {r.status === "match" ? "✓" : "✗"}{" "}
+                        {r.field.replace(/_/g, " ")}: {r.status}
+                      </li>
+                    ))}
+                </ul>
+                <p className="text-xs text-gray-500">{verifyResult.disclaimer}</p>
+              </div>
+            )}
+            <Link
+              to="/agent"
+              className="inline-block text-sm text-gray-500 hover:text-gray-900"
+            >
+              Skip for now
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return ( 
+    
     <div className="min-h-[calc(100vh-64px)] bg-gray-50">
       {/* Gradient header banner */}
       <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-blue-500 text-white">
@@ -429,6 +609,11 @@ export default function AddProperty() {
                 onChange={handleChange}
                 className={inputClass}
               />
+            </div>
+
+            <div>
+              <label className={labelClass}>ePID (10-digit property ID)</label>
+              <input type="text" inputMode="numeric" maxLength={10} pattern="\d{10}" name="epid" value={form.epid} onChange={handleChange} placeholder="e.g. 5196874965" className={inputClass} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
