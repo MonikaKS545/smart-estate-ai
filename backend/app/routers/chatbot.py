@@ -97,7 +97,7 @@ def stream_chat_message(
             yield f"data: {json.dumps({'chunk': chunk, 'done': False})}\n\n"
         
         # Send completion with metadata
-        yield f"data: {json.dumps({'chunk': '', 'done': True, 'referenced_property_ids': result['referenced_property_ids'], 'timing': result.get('timing', {}), 'filters_used': result.get('filters_used', {})})}\n\n"
+        yield f"data: {json.dumps({'chunk': '', 'done': True, 'referenced_property_ids': result['referenced_property_ids'], 'timing': result.get('timing', {}), 'filters_used': result.get('filters_used', {}), 'fallback': result.get('fallback', False)})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 

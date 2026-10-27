@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Send, Bot, User, Loader2 } from "lucide-react";
 import { mockChatWelcome } from "../mocks/mockChat";
 import PropertyCard from "./PropertyCard";
 import client from "../api/client";
 
 export default function ChatWindow() {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([
     { role: "assistant", ...mockChatWelcome },
   ]);
@@ -54,6 +56,7 @@ export default function ChatWindow() {
       referenced_property_ids: [],
       timing: {},
       tempId,
+      fallback: false,
     };
     setMessages((prev) => [...prev, assistantMessageRef.current]);
 
@@ -75,43 +78,60 @@ export default function ChatWindow() {
       const decoder = new TextDecoder();
       let fullText = "";
       let done = false;
+      let buffer = "";
+
+      const processEvent = (eventText) => {
+        const dataLine = eventText
+          .split("\n")
+          .map((line) => line.trimEnd())
+          .find((line) => line.startsWith("data:"));
+        if (!dataLine) return;
+        const jsonText = dataLine.startsWith("data: ")
+          ? dataLine.slice(6)
+          : dataLine.slice(5);
+        try {
+          const data = JSON.parse(jsonText);
+          if (data.chunk) {
+            fullText += data.chunk;
+            assistantMessageRef.current.response_text = fullText;
+            setMessages((prev) => prev.map((m) => (m.tempId === tempId ? { ...assistantMessageRef.current } : m)));
+          }
+          if (data.done) {
+            assistantMessageRef.current.referenced_property_ids = data.referenced_property_ids || [];
+            assistantMessageRef.current.timing = data.timing || {};
+            assistantMessageRef.current.fallback = Boolean(data.fallback);
+            setMessages((prev) => prev.map((m) => (m.tempId === tempId ? { ...assistantMessageRef.current } : m)));
+            if (!data.fallback && data.referenced_property_ids?.length > 0) {
+              fetchPropertyDetails(data.referenced_property_ids);
+            }
+          }
+        
+          } catch (e) {
+           console.error("SSE parse failed:", e, jsonText);
+          }
+      };
 
       while (!done) {
         const { value, done: readerDone } = await reader.read();
         done = readerDone;
         if (value) {
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.chunk) {
-                  fullText += data.chunk;
-                  assistantMessageRef.current.response_text = fullText;
-                  setMessages((prev) => prev.map((m) => (m.tempId === tempId ? { ...assistantMessageRef.current } : m)));
-                }
-                if (data.done) {
-                  assistantMessageRef.current.referenced_property_ids = data.referenced_property_ids || [];
-                  assistantMessageRef.current.timing = data.timing || {};
-                  setMessages((prev) => prev.map((m) => (m.tempId === tempId ? { ...assistantMessageRef.current } : m)));
-                  
-                  if (data.referenced_property_ids?.length > 0) {
-                    await fetchPropertyDetails(data.referenced_property_ids);
-                  }
-                }
-              } catch (e) {
-                // Ignore parse errors for incomplete chunks
-              }
-            }
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split(/\r?\n\r?\n/);
+          buffer = events.pop() || "";
+          for (const event of events) {
+            processEvent(event);
           }
         }
+      }
+      if (buffer.trim()) {
+        processEvent(buffer);
       }
     } catch (err) {
       const errorMessage = {
         role: "assistant",
         response_text: err.response?.data?.detail || "Something went wrong. Please try again.",
         referenced_property_ids: [],
+        fallback: true,
       };
       setMessages((prev) => prev.map((m) => (m.tempId === tempId ? errorMessage : m)));
     } finally {
@@ -151,12 +171,12 @@ export default function ChatWindow() {
                 )}
               </div>
 
-              {msg.referenced_property_ids?.length > 0 && (
+              {!msg.fallback && msg.referenced_property_ids?.length > 0 && (
                 <div className="grid grid-cols-1 gap-2">
                   {msg.referenced_property_ids.map((id) => {
                     const property = propertyCache[id];
                     if (!property) return null;
-                    return <PropertyCard key={id} property={property} />;
+                    return <PropertyCard key={id} property={property} onClick={() => navigate(`/property/${property.id}`)} />;
                   })}
                 </div>
               )}
